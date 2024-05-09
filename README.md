@@ -3,6 +3,12 @@
 <br>
 </h1>
 
+## Important Notice
+
+`pg_analytics` has been succeeded by [`pg_lakehouse`](https://github.com/paradedb/paradedb/tree/dev/pg_lakehouse), an analytical query engine over data lakes for Postgres. Whereas `pg_analytics` is designed query over data stored within Postgres, `pg_lakehouse` queries over external data lakes like S3 and table formats like Iceberg. Because we've seen greater demand for `pg_lakehouse`, we're choosing to focus our development efforts on `pg_lakehouse` for the next few months.
+
+As a result, `pg_analytics` has been moved out of the [main ParadeDB repo](https://github.com/paradedb/paradedb/tree/dev). It is possible that development on `pg_analytics` will resume in the future.
+
 ## Overview
 
 `pg_analytics` is an extension that accelerates analytical query processing inside Postgres. The performance of analytical queries that leverage `pg_analytics` is comparable to the performance of dedicated OLAP databases — without the need to extract, transform, and load (ETL) the data from your Postgres instance into another system. The purpose of `pg_analytics` is to be a drop-in solution for fast analytics in Postgres with zero ETL.
