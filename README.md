@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="../docs/logo/pg_analytics.svg" alt="pg_analytics" width="500px">
+  <img src="assets/pg_analytics.svg" alt="pg_analytics" width="500px">
 <br>
 </h1>
 
