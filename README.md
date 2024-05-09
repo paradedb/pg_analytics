@@ -5,7 +5,7 @@
 
 ## Important Notice
 
-`pg_analytics` has been succeeded by [`pg_lakehouse`](https://github.com/paradedb/paradedb/tree/dev/pg_lakehouse), an analytical query engine over data lakes for Postgres. Whereas `pg_analytics` is designed query over data stored within Postgres, `pg_lakehouse` queries over external data lakes like S3 and table formats like Iceberg. Because we've seen greater demand for `pg_lakehouse`, we're choosing to focus our development efforts on `pg_lakehouse` for the next few months.
+`pg_analytics` has been succeeded by [`pg_lakehouse`](https://github.com/paradedb/paradedb/tree/dev/pg_lakehouse), an analytical query engine over data lakes for Postgres. Whereas `pg_analytics` is designed to query over data stored within Postgres, `pg_lakehouse` queries over external data lakes like S3 and table formats like Iceberg. Because we've seen greater demand for `pg_lakehouse`, we're choosing to focus our development efforts on `pg_lakehouse` for the next few months.
 
 As a result, `pg_analytics` has been moved out of the [main ParadeDB repo](https://github.com/paradedb/paradedb/tree/dev). It is possible that development on `pg_analytics` will resume in the future.
 
