@@ -21,9 +21,9 @@ mod query;
 use async_std::task::block_on;
 use pgrx::*;
 
-pub struct LakehouseHook;
+pub struct ExtensionHook;
 
-impl hooks::PgHooks for LakehouseHook {
+impl hooks::PgHooks for ExtensionHook {
     fn executor_run(
         &mut self,
         query_desc: PgBox<pg_sys::QueryDesc>,

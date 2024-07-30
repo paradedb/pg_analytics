@@ -21,7 +21,7 @@ mod fdw;
 mod hooks;
 mod schema;
 
-use hooks::LakehouseHook;
+use hooks::ExtensionHook;
 use pgrx::*;
 use shared::{
     gucs::PostgresGlobalGucSettings,
@@ -33,7 +33,7 @@ pub static GUCS: PostgresGlobalGucSettings = PostgresGlobalGucSettings::new();
 
 pg_module_magic!();
 
-static mut EXTENSION_HOOK: LakehouseHook = LakehouseHook;
+static mut EXTENSION_HOOK: ExtensionHook = ExtensionHook;
 
 #[pg_guard]
 pub extern "C" fn _PG_init() {
@@ -44,6 +44,7 @@ pub extern "C" fn _PG_init() {
 
     GUCS.init("pg_analytics");
 
+    // TODO: Change to ParadeExtension::PgAnalytics
     setup_telemetry_background_worker(ParadeExtension::PgLakehouse);
 }
 
