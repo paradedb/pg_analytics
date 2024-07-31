@@ -41,13 +41,15 @@ static INIT: Once = Once::new();
 
 fn init_globals() {
     let mut duckdb_path = postgres_data_dir_path();
-    duckdb_path.push(postgres_database_oid().to_string());
-    duckdb_path.set_extension("db3");
+    duckdb_path.push("pg_analytics");
 
     if !duckdb_path.exists() {
         std::fs::create_dir_all(duckdb_path.clone())
             .expect("failed to create duckdb data directory");
     }
+
+    duckdb_path.push(postgres_database_oid().to_string());
+    duckdb_path.set_extension("db3");
 
     let conn = Connection::open(duckdb_path).expect("failed to open duckdb connection");
     unsafe {
