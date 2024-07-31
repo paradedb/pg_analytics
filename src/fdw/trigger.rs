@@ -121,13 +121,14 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     // Drop stale view
     connection::drop_relation(table_name, schema_name)?;
 
-    // Register DuckDB view
+    // Create DuckDB secrets
     let foreign_server = unsafe { pg_sys::GetForeignServer((*foreign_table).serverid) };
     let user_mapping_options = unsafe { user_mapping_options(foreign_server) };
     if !user_mapping_options.is_empty() {
         connection::create_secret(user_mapping_options)?;
     }
 
+    // Create DuckDB relation
     let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
     let handler = FdwHandler::from(foreign_table);
     register_duckdb_view(table_name, schema_name, table_options.clone(), handler)?;
