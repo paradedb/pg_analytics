@@ -127,8 +127,8 @@ jobs:
 
           echo ""
           echo "Enabling code coverage..."
-          echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> ../.cargo/config.toml
-          mkdir -p ../target/coverage ../target/coverage-report
+          echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> .cargo/config.toml
+          mkdir -p target/coverage target/coverage-report
 
           echo ""
           echo "Building pg_analytics..."
