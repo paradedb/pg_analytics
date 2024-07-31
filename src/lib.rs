@@ -17,6 +17,7 @@
 
 mod api;
 mod duckdb;
+mod env;
 mod fdw;
 mod hooks;
 mod schema;

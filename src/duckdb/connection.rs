@@ -25,6 +25,8 @@ use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
 
+use crate::env::{postgres_data_dir_path, postgres_database_oid};
+
 use super::csv;
 use super::delta;
 use super::iceberg;
@@ -38,7 +40,16 @@ static mut GLOBAL_ARROW: Option<UnsafeCell<Option<duckdb::Arrow<'static>>>> = No
 static INIT: Once = Once::new();
 
 fn init_globals() {
-    let conn = Connection::open_in_memory().expect("failed to open duckdb connection");
+    let mut duckdb_path = postgres_data_dir_path();
+    duckdb_path.push(postgres_database_oid().to_string());
+    duckdb_path.set_extension("db3");
+
+    if !duckdb_path.exists() {
+        std::fs::create_dir_all(duckdb_path.clone())
+            .expect("failed to create duckdb data directory");
+    }
+
+    let conn = Connection::open(duckdb_path).expect("failed to open duckdb connection");
     unsafe {
         GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
