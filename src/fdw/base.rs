@@ -15,14 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 
-use super::handler::FdwHandler;
 use crate::duckdb::connection;
 use crate::schema::cell::*;
 

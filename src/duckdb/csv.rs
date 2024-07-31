@@ -25,6 +25,7 @@ pub enum CsvOption {
     AllowQuotedNulls,
     AutoDetect,
     AutoTypeCandidates,
+    Cache,
     Columns,
     Compression,
     Dateformat,
@@ -63,6 +64,7 @@ impl CsvOption {
             Self::AllowQuotedNulls => "allow_quoted_nulls",
             Self::AutoDetect => "auto_detect",
             Self::AutoTypeCandidates => "auto_type_candidates",
+            Self::Cache => "cache",
             Self::Columns => "columns",
             Self::Compression => "compression",
             Self::Dateformat => "dateformat",
@@ -101,6 +103,7 @@ impl CsvOption {
             Self::AllowQuotedNulls => false,
             Self::AutoDetect => false,
             Self::AutoTypeCandidates => false,
+            Self::Cache => false,
             Self::Columns => false,
             Self::Compression => false,
             Self::Dateformat => false,
@@ -139,6 +142,7 @@ impl CsvOption {
             Self::AllowQuotedNulls,
             Self::AutoDetect,
             Self::AutoTypeCandidates,
+            Self::Cache,
             Self::Columns,
             Self::Compression,
             Self::Dateformat,
@@ -347,7 +351,14 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_csv({create_csv_str})"))
+    let cache = table_options
+        .get(CsvOption::Cache.as_str())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_csv({create_csv_str})"))
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
 pub enum DeltaOption {
+    Cache,
     Files,
     PreserveCasing,
 }
@@ -26,6 +27,7 @@ pub enum DeltaOption {
 impl DeltaOption {
     pub fn as_str(&self) -> &str {
         match self {
+            Self::Cache => "cache",
             Self::Files => "files",
             Self::PreserveCasing => "preserve_casing",
         }
@@ -33,13 +35,14 @@ impl DeltaOption {
 
     pub fn is_required(&self) -> bool {
         match self {
+            Self::Cache => false,
             Self::Files => true,
             Self::PreserveCasing => false,
         }
     }
 
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Files, Self::PreserveCasing].into_iter()
+        [Self::Cache, Self::Files, Self::PreserveCasing].into_iter()
     }
 }
 
@@ -55,8 +58,15 @@ pub fn create_view(
             .ok_or_else(|| anyhow!("files option is required"))?
     );
 
+    let cache = table_options
+        .get(DeltaOption::Cache.as_str())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
     Ok(format!(
-        "CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM delta_scan({files})"
+        "CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM delta_scan({files})"
     ))
 }
 

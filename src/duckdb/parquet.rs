@@ -22,7 +22,7 @@ use super::utils;
 
 pub enum ParquetOption {
     BinaryAsString,
-    Cached,
+    Cache,
     FileName,
     FileRowNumber,
     Files,
@@ -38,7 +38,7 @@ impl ParquetOption {
     pub fn as_str(&self) -> &str {
         match self {
             Self::BinaryAsString => "binary_as_string",
-            Self::Cached => "cached",
+            Self::Cache => "cache",
             Self::FileName => "file_name",
             Self::FileRowNumber => "file_row_number",
             Self::Files => "files",
@@ -53,7 +53,7 @@ impl ParquetOption {
     pub fn is_required(&self) -> bool {
         match self {
             Self::BinaryAsString => false,
-            Self::Cached => false,
+            Self::Cache => false,
             Self::FileName => false,
             Self::FileRowNumber => false,
             Self::Files => true,
@@ -68,7 +68,7 @@ impl ParquetOption {
     pub fn iter() -> impl Iterator<Item = Self> {
         [
             Self::BinaryAsString,
-            Self::Cached,
+            Self::Cache,
             Self::FileName,
             Self::FileRowNumber,
             Self::Files,
@@ -136,12 +136,12 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    let cached = table_options
-        .get(ParquetOption::Cached.as_str())
+    let cache = table_options
+        .get(ParquetOption::Cache.as_str())
         .map(|s| s.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 
-    let relation = if cached { "TABLE" } else { "VIEW" };
+    let relation = if cache { "TABLE" } else { "VIEW" };
 
     Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
 }

@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 pub enum IcebergOption {
     AllowMovedPaths,
+    Cache,
     Files,
     PreserveCasing,
 }
@@ -28,6 +29,7 @@ impl IcebergOption {
     pub fn as_str(&self) -> &str {
         match self {
             Self::AllowMovedPaths => "allow_moved_paths",
+            Self::Cache => "cache",
             Self::Files => "files",
             Self::PreserveCasing => "preserve_casing",
         }
@@ -36,13 +38,20 @@ impl IcebergOption {
     pub fn is_required(&self) -> bool {
         match self {
             Self::AllowMovedPaths => false,
+            Self::Cache => false,
             Self::Files => true,
             Self::PreserveCasing => false,
         }
     }
 
     pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::AllowMovedPaths, Self::Files, Self::PreserveCasing].into_iter()
+        [
+            Self::AllowMovedPaths,
+            Self::Cache,
+            Self::Files,
+            Self::PreserveCasing,
+        ]
+        .into_iter()
     }
 }
 
@@ -68,7 +77,14 @@ pub fn create_view(
         .collect::<Vec<String>>()
         .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM iceberg_scan({create_iceberg_str})"))
+    let cache = table_options
+        .get(IcebergOption::Cache.as_str())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM iceberg_scan({create_iceberg_str})"))
 }
 
 #[cfg(test)]
