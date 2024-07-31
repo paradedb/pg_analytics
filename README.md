@@ -1,100 +1,174 @@
 <h1 align="center">
-  <img src="assets/pg_analytics.svg" alt="pg_analytics" width="500px">
+  <img src="../docs/logo/pg_analytics.svg" alt="pg_analytics" width="500px">
 <br>
 </h1>
 
-## Important Notice
-
-`pg_analytics` has been succeeded by [`pg_lakehouse`](https://github.com/paradedb/paradedb/tree/dev/pg_lakehouse). Whereas `pg_analytics` is designed to query over data stored within Postgres, `pg_lakehouse` queries over external data lakes like S3 and table formats like Iceberg, storing no data inside Postgres. Because we are strong believers of separation of storage and compute and have seen greater demand for `pg_lakehouse`, we're choosing to focus our development efforts on `pg_lakehouse` for the next few months.
-
-As a result, `pg_analytics` has been moved out of the [main ParadeDB repo](https://github.com/paradedb/paradedb/tree/dev). It is possible that development on `pg_analytics` will resume in the future.
+[![Test pg_analytics](https://github.com/paradedb/paradedb/actions/workflows/test-pg_analytics.yml/badge.svg)](https://github.com/paradedb/paradedb/actions/workflows/test-pg_analytics.yml)
+[![Benchmark pg_analytics](https://github.com/paradedb/paradedb/actions/workflows/benchmark-pg_analytics.yml/badge.svg)](https://github.com/paradedb/paradedb/actions/workflows/benchmark-pg_analytics.yml)
 
 ## Overview
 
-`pg_analytics` is an extension that accelerates analytical query processing inside Postgres. The performance of analytical queries that leverage `pg_analytics` is comparable to the performance of dedicated OLAP databases — without the need to extract, transform, and load (ETL) the data from your Postgres instance into another system. The purpose of `pg_analytics` is to be a drop-in solution for fast analytics in Postgres with zero ETL.
+`pg_analytics` (formerly named `pg_lakehouse`) puts DuckDB inside Postgres.
 
-The primary dependencies are:
+With `pg_analytics` installed, Postgres can query foreign object stores like S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high performance analytical query engine.
 
-- [x] [Apache Arrow](https://github.com/apache/arrow) for column-oriented memory format
-- [x] [Apache DataFusion](https://github.com/apache/arrow-datafusion) for vectorized query execution with SIMD
-- [x] [Apache Parquet](https://github.com/apache/parquet-mr/) for persistence
-- [x] [Delta Lake](https://github.com/delta-io/delta-rs) as a storage framework with ACID properties
-- [x] [pgrx](https://github.com/pgcentralfoundation/pgrx), the framework for creating Postgres extensions in Rust
+### Motivation
 
-## How It Works
+Today, a vast amount of non-operational data — events, metrics, historical snapshots, vendor data, etc. — is ingested into data lakes like S3. Querying this data by moving it into a cloud data warehouse or operating a new query engine is expensive and time-consuming. The goal of `pg_analytics` is to enable this data to be queried directly from Postgres. This eliminates the need for new infrastructure, loss of data freshness, data movement, and non-Postgres dialects of other query engines.
 
-These libraries are the building blocks of many modern analytical databases and enable column-oriented storage, efficient data compression, and vectorized query execution within Postgres. Please see our [blog post](https://blog.paradedb.com/pages/introducing_analytics) for a deep dive into how it works.
+`pg_analytics` uses the foreign data wrapper (FDW) API to connect to any object store or table format and the executor hook API to push queries to DuckDB. While other FDWs like `aws_s3` have existed in the Postgres extension ecosystem, these FDWs suffer from two limitations:
 
-## Benchmarks
+1. Lack of support for most object stores and table formats
+2. Too slow over large datasets to be a viable analytical engine
 
-With `pg_analytics` installed, ParadeDB is the fastest Postgres-based analytical database and outperforms many specialized OLAP systems. On Clickbench, ParadeDB is 94x faster than regular Postgres, 8x faster than Elasticsearch, and almost ties Clickhouse.
+`pg_analytics` differentiates itself by supporting a wide breadth of stores and formats and by being very fast (thanks to DuckDB).
 
-<img src="assets/clickbench_results.png" alt="Clickbench Results" width="1000px">
+### Roadmap
 
-For an apples-to-apples comparison, these benchmarks were run on a c6a.4xlarge with 500GB storage. None of the databases were tuned. The (Parquet, single) Clickhouse variant was selected because it most closely matches ParadeDB's Parquet storage.
+- [ ] Read support for `pg_analytics`
+- [ ] Write support for `pg_analytics`
+- [ ] `EXPLAIN` support
+- [ ] Automatic schema detection
+- [ ] Integration with the catalog providers
 
-You can view the ParadeDB ClickBench results against other Postgres-compatible OLAP databases [here](https://benchmark.clickhouse.com/#eyJzeXN0ZW0iOnsiQWxsb3lEQiI6dHJ1ZSwiQXRoZW5hIChwYXJ0aXRpb25lZCkiOnRydWUsIkF0aGVuYSAoc2luZ2xlKSI6dHJ1ZSwiQXVyb3JhIGZvciBNeVNRTCI6dHJ1ZSwiQXVyb3JhIGZvciBQb3N0Z3JlU1FMIjp0cnVlLCJCeUNvbml0eSI6dHJ1ZSwiQnl0ZUhvdXNlIjp0cnVlLCJjaERCIjp0cnVlLCJDaXR1cyI6dHJ1ZSwiQ2xpY2tIb3VzZSBDbG91ZCAoYXdzKSI6dHJ1ZSwiQ2xpY2tIb3VzZSBDbG91ZCAoZ2NwKSI6dHJ1ZSwiQ2xpY2tIb3VzZSAyMy4xMSAoZGF0YSBsYWtlLCBwYXJ0aXRpb25lZCkiOnRydWUsIkNsaWNrSG91c2UgMjMuMTEgKGRhdGEgbGFrZSwgc2luZ2xlKSI6dHJ1ZSwiQ2xpY2tIb3VzZSAyMy4xMSAoUGFycXVldCwgcGFydGl0aW9uZWQpIjp0cnVlLCJDbGlja0hvdXNlIDIzLjExIChQYXJxdWV0LCBzaW5nbGUpIjp0cnVlLCJDbGlja0hvdXNlIDIzLjExICh3ZWIpIjp0cnVlLCJDbGlja0hvdXNlIjp0cnVlLCJDbGlja0hvdXNlICh0dW5lZCkiOnRydWUsIkNsaWNrSG91c2UgMjMuMTEiOnRydWUsIkNsaWNrSG91c2UgKHpzdGQpIjp0cnVlLCJDcmF0ZURCIjp0cnVlLCJEYXRhYmVuZCI6dHJ1ZSwiRGF0YUZ1c2lvbiAoUGFycXVldCwgcGFydGl0aW9uZWQpIjp0cnVlLCJEYXRhRnVzaW9uIChQYXJxdWV0LCBzaW5nbGUpIjp0cnVlLCJBcGFjaGUgRG9yaXMiOnRydWUsIkRydWlkIjp0cnVlLCJEdWNrREIgKFBhcnF1ZXQsIHBhcnRpdGlvbmVkKSI6dHJ1ZSwiRHVja0RCIjp0cnVlLCJFbGFzdGljc2VhcmNoIjp0cnVlLCJFbGFzdGljc2VhcmNoICh0dW5lZCkiOnRydWUsIkdyZWVucGx1bSI6dHJ1ZSwiSGVhdnlBSSI6dHJ1ZSwiSHlkcmEiOnRydWUsIkluZm9icmlnaHQiOnRydWUsIktpbmV0aWNhIjp0cnVlLCJNYXJpYURCIENvbHVtblN0b3JlIjp0cnVlLCJNYXJpYURCIjp0cnVlLCJNb25ldERCIjp0cnVlLCJNb25nb0RCIjp0cnVlLCJNeVNRTCAoTXlJU0FNKSI6dHJ1ZSwiTXlTUUwiOnRydWUsIlBhcmFkZURCIjp0cnVlLCJQaW5vdCI6dHJ1ZSwiUG9zdGdyZVNRTCAodHVuZWQpIjp0cnVlLCJQb3N0Z3JlU1FMIjp0cnVlLCJRdWVzdERCIChwYXJ0aXRpb25lZCkiOnRydWUsIlF1ZXN0REIiOnRydWUsIlJlZHNoaWZ0Ijp0cnVlLCJTZWxlY3REQiI6dHJ1ZSwiU2luZ2xlU3RvcmUiOnRydWUsIlNub3dmbGFrZSI6dHJ1ZSwiU1FMaXRlIjp0cnVlLCJTdGFyUm9ja3MiOnRydWUsIlRpbWVzY2FsZURCIChjb21wcmVzc2lvbikiOnRydWUsIlRpbWVzY2FsZURCIjp0cnVlfSwidHlwZSI6eyJDIjpmYWxzZSwiY29sdW1uLW9yaWVudGVkIjpmYWxzZSwiUG9zdGdyZVNRTCBjb21wYXRpYmxlIjp0cnVlLCJtYW5hZ2VkIjpmYWxzZSwiZ2NwIjpmYWxzZSwic3RhdGVsZXNzIjpmYWxzZSwiSmF2YSI6ZmFsc2UsIkMrKyI6ZmFsc2UsIk15U1FMIGNvbXBhdGlibGUiOmZhbHNlLCJyb3ctb3JpZW50ZWQiOmZhbHNlLCJDbGlja0hvdXNlIGRlcml2YXRpdmUiOmZhbHNlLCJlbWJlZGRlZCI6ZmFsc2UsInNlcnZlcmxlc3MiOmZhbHNlLCJhd3MiOmZhbHNlLCJSdXN0IjpmYWxzZSwic2VhcmNoIjpmYWxzZSwiZG9jdW1lbnQiOmZhbHNlLCJ0aW1lLXNlcmllcyI6ZmFsc2V9LCJtYWNoaW5lIjp7IjE2IHZDUFUgMTI4R0IiOnRydWUsIjggdkNQVSA2NEdCIjp0cnVlLCJzZXJ2ZXJsZXNzIjp0cnVlLCIxNmFjdSI6dHJ1ZSwiYzZhLjR4bGFyZ2UsIDUwMGdiIGdwMiI6dHJ1ZSwiTCI6dHJ1ZSwiTSI6dHJ1ZSwiUyI6dHJ1ZSwiWFMiOnRydWUsImM2YS5tZXRhbCwgNTAwZ2IgZ3AyIjp0cnVlLCIxOTJHQiI6dHJ1ZSwiMjRHQiI6dHJ1ZSwiMzYwR0IiOnRydWUsIjQ4R0IiOnRydWUsIjcyMEdCIjp0cnVlLCI5NkdCIjp0cnVlLCIxNDMwR0IiOnRydWUsImRldiI6dHJ1ZSwiNzA4R0IiOnRydWUsImM1bi40eGxhcmdlLCA1MDBnYiBncDIiOnRydWUsImM1LjR4bGFyZ2UsIDUwMGdiIGdwMiI6dHJ1ZSwibTVkLjI0eGxhcmdlIjp0cnVlLCJtNmkuMzJ4bGFyZ2UiOnRydWUsImM2YS40eGxhcmdlLCAxNTAwZ2IgZ3AyIjp0cnVlLCJkYzIuOHhsYXJnZSI6dHJ1ZSwicmEzLjE2eGxhcmdlIjp0cnVlLCJyYTMuNHhsYXJnZSI6dHJ1ZSwicmEzLnhscGx1cyI6dHJ1ZSwiUzIiOnRydWUsIlMyNCI6dHJ1ZSwiMlhMIjp0cnVlLCIzWEwiOnRydWUsIjRYTCI6dHJ1ZSwiWEwiOnRydWV9LCJjbHVzdGVyX3NpemUiOnsiMSI6dHJ1ZSwiMiI6dHJ1ZSwiNCI6dHJ1ZSwiOCI6dHJ1ZSwiMTYiOnRydWUsIjMyIjp0cnVlLCI2NCI6dHJ1ZSwiMTI4Ijp0cnVlLCJzZXJ2ZXJsZXNzIjp0cnVlLCJkZWRpY2F0ZWQiOnRydWUsInVuZGVmaW5lZCI6dHJ1ZX0sIm1ldHJpYyI6ImhvdCIsInF1ZXJpZXMiOlt0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlLHRydWUsdHJ1ZSx0cnVlXX0=).
+#### Object Stores
 
-## Getting Started
+- [x] Amazon S3
+- [x] S3-compatible stores (MinIO, R2)
+- [x] Azure Blob Storage
+- [x] Azure Data Lake Storage Gen2
+- [x] Google Cloud Storage
+- [x] HTTP server
+- [x] Local file system
 
-This toy example demonstrates how to get started.
+#### Table Formats
+
+- [x] Parquet
+- [x] CSV
+- [x] Apache Iceberg
+- [x] Delta Lake
+- [ ] JSON (Coming Soon)
+
+`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, and 16. Support for Postgres 12 and 13 is coming soon.
+
+## Installation
+
+### From ParadeDB
+
+The easiest way to use the extension is to run the ParadeDB Dockerfile:
+
+```bash
+docker run \
+  --name paradedb \
+  -e POSTGRESQL_USERNAME=<user> \
+  -e POSTGRESQL_PASSWORD=<password> \
+  -e POSTGRESQL_DATABASE=<dbname> \
+  -e POSTGRESQL_POSTGRES_PASSWORD=<superuser_password> \
+  -v paradedb_data:/bitnami/postgresql \
+  -p 5432:5432 \
+  -d \
+  paradedb/paradedb:latest
+```
+
+This will spin up a Postgres instance with `pg_analytics` preinstalled.
+
+### From Self-Hosted PostgreSQL
+
+If you are self-hosting Postgres and would like to use the extension within your existing Postgres, follow the steps below.
+
+It's **very important** to make the following change to your `postgresql.conf` configuration file. `pg_analytics` must be in the list of `shared_preload_libraries`:
+
+```c
+shared_preload_libraries = 'pg_analytics'
+```
+
+This ensures the best query performance from the extension .
+
+#### Debian/Ubuntu
+
+We provide prebuilt binaries for Debian-based Linux for Postgres 16, 15 and 14. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
+
+ParadeDB collects anonymous telemetry to help us understand how many people are using the project. You can opt out of telemetry by setting `export PARADEDB_TELEMETRY=false` (or unsetting the variable) in your shell or in your `~/.bashrc` file before running the extension.
+
+#### macOS
+
+We don't suggest running production workloads on macOS. As a result, we don't provide prebuilt binaries for macOS. If you are running Postgres on macOS and want to install `pg_analytics`, please follow the [development](#development) instructions, but do `cargo pgrx install --release` instead of `cargo pgrx run`. This will build the extension from source and install it in your Postgres instance.
+
+You can then create the extension in your database by running:
 
 ```sql
 CREATE EXTENSION pg_analytics;
--- Create a parquet table
-CREATE TABLE t (a int) USING parquet;
--- pg_analytics supercharges the performance of any
--- Postgres query run on a parquet table
-INSERT INTO t VALUES (1), (2), (3);
-SELECT COUNT(*) FROM t;
 ```
 
-## Parquet Tables
+Note: If you are using a managed Postgres service like Amazon RDS, you will not be able to install `pg_analytics` until the Postgres service explicitly supports it.
 
-You can interact with `parquet` tables the same way as with normal Postgres tables. However, there are a few exceptions.
+#### Windows
 
-### Append Only
+Windows is not supported. This restriction is [inherited from pgrx not supporting Windows](https://github.com/pgcentralfoundation/pgrx?tab=readme-ov-file#caveats--known-issues).
 
-Because column-oriented storage formats are not designed for fast updates, `parquet` tables are append only.
-This means that `parquet` tables do not support `UPDATE` and `DELETE` clauses. Data that is frequently updated
-should be stored in regular Postgres `heap` tables.
+## Usage
 
-### Storage Optimization
+The following example uses `pg_analytics` to query an example dataset of 3 million NYC taxi trips from January 2024, hosted in a public `us-east-1` S3 bucket provided by ParadeDB.
 
-The `VACUUM FULL <table_name>` command is used to optimize a table's storage by bin-packing small Parquet
-files into larger files, which can significantly improve query time and compression.
+```sql
+CREATE EXTENSION pg_analytics;
+CREATE FOREIGN DATA WRAPPER parquet_wrapper HANDLER parquet_fdw_handler VALIDATOR parquet_fdw_validator;
 
-## Roadmap
+-- Provide S3 credentials
+CREATE SERVER parquet_server FOREIGN DATA WRAPPER parquet_wrapper;
 
-`pg_analytics` is currently in beta.
+-- Create foreign table with auto schema creation
+CREATE FOREIGN TABLE trips ()
+SERVER parquet_server
+OPTIONS (files 's3://paradedb-benchmarks/yellow_tripdata_2024-01.parquet');
 
-### Known Limitations
+-- Success! Now you can query the remote Parquet file like a regular Postgres table
+SELECT COUNT(*) FROM trips;
+  count
+---------
+ 2964624
+(1 row)
+```
 
-As `pg_analytics` becomes production-ready, many of these will be resolved.
+To query your own data, please refer to the [documentation](https://docs.paradedb.com/analytics/object_stores).
 
-- [ ] `UPDATE` and `DELETE`
-- [ ] Some Postgres types, notably `json` and `timestamptz`
-- [ ] Write-ahead log (WAL) support
-- [ ] Collations
-- [ ] `INSERT ... ON CONFLICT` clauses
+## Shared Preload Libraries
+
+Because this extension uses Postgres hooks to intercept and push queries down to DuckDB, it is **very important** that it is added to `shared_preload_libraries` inside `postgresql.conf`.
+
+```bash
+# Inside postgresql.conf
+shared_preload_libraries = 'pg_analytics'
+```
 
 ## Development
 
 ### Install Rust
 
-To develop the extension, first install Rust v1.76.0 using `rustup`. We will soon make the extension compatible with newer versions of Rust:
+To develop the extension, first install Rust via `rustup`.
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup install 1.76.0
+rustup install <version>
 
-# We recommend setting the default version to 1.76.0 for consistency across your system
-rustup default 1.76.0
+rustup default <version>
 ```
 
-Note: While it is possible to install Rust via your package manager, we recommend using `rustup` as we've observed inconcistencies with Homebrew's Rust installation on macOS.
+Note: While it is possible to install Rust via your package manager, we recommend using `rustup` as we've observed inconsistencies with Homebrew's Rust installation on macOS.
 
 Then, install the PostgreSQL version of your choice using your system package manager. Here we provide the commands for the default PostgreSQL version used by this project:
+
+### Install Other Dependencies
+
+Before compiling the extension, you'll need to have the following dependencies installed.
+
+```bash
+# macOS
+brew install make gcc pkg-config openssl
+
+# Ubuntu
+sudo apt-get install -y make gcc pkg-config libssl-dev
+```
 
 ### Install Postgres
 
@@ -120,7 +194,7 @@ Then, install and initialize `pgrx`:
 
 ```bash
 # Note: Replace --pg16 with your version of Postgres, if different (i.e. --pg15, --pg14, etc.)
-cargo install --locked cargo-pgrx --version 0.12.0-alpha.1
+cargo install --locked cargo-pgrx --version 0.11.3
 
 # macOS arm64
 cargo pgrx init --pg16=/opt/homebrew/opt/postgresql@16/bin/pg_config
@@ -136,55 +210,16 @@ If you prefer to use a different version of Postgres, update the `--pg` flag acc
 
 Note: While it is possible to develop using pgrx's own Postgres installation(s), via `cargo pgrx init` without specifying a `pg_config` path, we recommend using your system package manager's Postgres as we've observed inconsistent behaviours when using pgrx's.
 
-### Configure Shared Preload Libraries
+### Running Tests
 
-This extension uses Postgres hooks to intercept Postgres queries. In order to enable these hooks, the extension
-must be added to `shared_preload_libraries` inside `postgresql.conf`. If you are using Postgres 16, this file can be found under `~/.pgrx/data-16`.
+We use `cargo test` as our runner for `pg_analytics` tests. Tests are conducted using [testcontainers](https://github.com/testcontainers/testcontainers-rs) to manage testing containers like [LocalStack](https://hub.docker.com/r/localstack/localstack). `testcontainers` will pull any Docker images that it requires to perform the test.
 
-```bash
-# Inside postgresql.conf
-shared_preload_libraries = 'pg_analytics'
+You also need a running Postgres instance to run the tests. The test suite will look for a connection string on the `DATABASE_URL` environment variable. You can set this variable manually, or use `.env` file with contents like this:
+
+```text
+DATABASE_URL=postgres://<username>@<host>:<port>/<database>
 ```
 
-### Run Without Optimized Build
+## License
 
-The extension can be developed with or without an optimized build. An optimized build improves query times by 10-20x but also significantly increases build times.
-
-To launch the extension without an optimized build, run
-
-```bash
-cargo pgrx run
-```
-
-### Run With Optimized Build
-
-First, switch to latest Rust Nightly (as of writing, 1.77) via:
-
-```bash
-rustup update nightly
-rustup override set nightly
-```
-
-Then, reinstall `pgrx` for the new version of Rust:
-
-```bash
-cargo install --locked cargo-pgrx --version 0.12.0-alpha.1 --force
-```
-
-Finally, run to build in release mode with SIMD:
-
-```bash
-cargo pgrx run --release
-```
-
-Note that this may take several minutes to execute.
-
-To revert back to the stable version of Rust, run:
-
-```bash
-rustup override unset
-```
-
-### Run Benchmarks
-
-We support two types of benchmarks: ClickBench and TPC-H. ClickBench is ideal for testing analytical queries, while TPC-H is ideal for testing JOINs. To run the benchmarks, cd into the `benchmarks/clickbench` or `benchmarks/tpch` directory and run `./benchmark.sh -t <flag>`. The `-t` flag is the version to benchmark, either `x.y.z` or `latest` to pull a version from DockerHub, or `local` to build the Docker image locally.
+`pg_analytics` is licensed under the [GNU Affero General Public License v3.0](../LICENSE) and as commercial software. For commercial licensing, please contact us at [sales@paradedb.com](mailto:sales@paradedb.com).

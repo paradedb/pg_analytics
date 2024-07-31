@@ -1,0 +1,8 @@
+# Order is important. The last matching pattern has the most precedence.
+
+/.cargo/                                                       @philippemnoel @rebasedming
+/.github/                                                      @philippemnoel @rebasedming
+/assets/                                                       @philippemnoel @rebasedming
+/cargo-paradedb/                                               @neilyio @rebasedming
+/src/                                                          @rebasedming @philippemnoel
+/tests/                                                        @rebasedming @neilyio

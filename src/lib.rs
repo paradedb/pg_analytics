@@ -1,33 +1,51 @@
-#![allow(non_snake_case)]
+// Copyright (c) 2023-2024 Retake, Inc.
+//
+// This file is part of ParadeDB - Postgres for Search and Analytics
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod datafusion;
-mod federation;
-mod guc;
+mod api;
+mod duckdb;
+mod fdw;
 mod hooks;
-mod storage;
-mod tableam;
-mod types;
+mod schema;
 
-use crate::hooks::ParadeHook;
-use guc::PostgresPgAnalyticsGucSettings;
+use hooks::ExtensionHook;
 use pgrx::*;
-
-pgrx::pg_module_magic!();
-extension_sql_file!("../sql/_bootstrap.sql");
+use shared::{
+    gucs::PostgresGlobalGucSettings,
+    telemetry::{setup_telemetry_background_worker, ParadeExtension},
+};
 
 // A static variable is required to host grand unified configuration settings.
-pub static GUCS: PostgresPgAnalyticsGucSettings = PostgresPgAnalyticsGucSettings::new();
-// These are the hooks that we register with Postgres.
-static mut PARADE_HOOK: ParadeHook = ParadeHook;
+pub static GUCS: PostgresGlobalGucSettings = PostgresGlobalGucSettings::new();
+
+pg_module_magic!();
+
+static mut EXTENSION_HOOK: ExtensionHook = ExtensionHook;
 
 #[pg_guard]
 pub extern "C" fn _PG_init() {
-    GUCS.init("pg_analytics");
-
     #[allow(static_mut_refs)]
     unsafe {
-        register_hook(&mut PARADE_HOOK)
+        register_hook(&mut EXTENSION_HOOK)
     };
+
+    GUCS.init("pg_analytics");
+
+    // TODO: Change to ParadeExtension::PgAnalytics
+    setup_telemetry_background_worker(ParadeExtension::PgLakehouse);
 }
 
 #[cfg(test)]
