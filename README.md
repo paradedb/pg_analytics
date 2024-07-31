@@ -1,10 +1,9 @@
 <h1 align="center">
-  <img src="../docs/logo/pg_analytics.svg" alt="pg_analytics" width="500px">
+  <img src="assets/pg_analytics.svg" alt="pg_analytics" width="500px">
 <br>
 </h1>
 
-[![Test pg_analytics](https://github.com/paradedb/paradedb/actions/workflows/test-pg_analytics.yml/badge.svg)](https://github.com/paradedb/paradedb/actions/workflows/test-pg_analytics.yml)
-[![Benchmark pg_analytics](https://github.com/paradedb/paradedb/actions/workflows/benchmark-pg_analytics.yml/badge.svg)](https://github.com/paradedb/paradedb/actions/workflows/benchmark-pg_analytics.yml)
+[![Test pg_analytics](https://github.com/paradedb/pg_analytics/actions/workflows/test-pg_analytics.yml/badge.svg)](https://github.com/paradedb/pg_analytics/actions/workflows/test-pg_analytics.yml)
 
 ## Overview
 
