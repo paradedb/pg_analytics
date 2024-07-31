@@ -249,7 +249,7 @@ fn construct_alter_table_statement(
 
     format!(
         "ALTER TABLE {} {}",
-        table_name,
+        spi::quote_identifier(table_name),
         column_definitions.join(", ")
     )
 }
