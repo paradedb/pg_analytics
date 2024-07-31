@@ -17,10 +17,10 @@
 
 use anyhow::{bail, Result};
 use pgrx::*;
+use std::collections::HashMap;
 use std::ffi::CStr;
 use supabase_wrappers::prelude::{options_to_hashmap, user_mapping_options};
 
-use super::base::register_duckdb_view;
 use crate::duckdb::connection;
 use crate::fdw::handler::FdwHandler;
 
@@ -119,23 +119,18 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     }
 
     // Drop stale view
-    connection::execute(
-        format!("DROP VIEW IF EXISTS {schema_name}.{table_name}").as_str(),
-        [],
-    )?;
+    connection::drop_relation(table_name, schema_name)?;
 
     // Register DuckDB view
     let foreign_server = unsafe { pg_sys::GetForeignServer((*foreign_table).serverid) };
     let user_mapping_options = unsafe { user_mapping_options(foreign_server) };
+    if !user_mapping_options.is_empty() {
+        connection::create_secret(user_mapping_options)?;
+    }
+
     let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
     let handler = FdwHandler::from(foreign_table);
-    register_duckdb_view(
-        table_name,
-        schema_name,
-        table_options.clone(),
-        user_mapping_options,
-        handler,
-    )?;
+    register_duckdb_view(table_name, schema_name, table_options.clone(), handler)?;
 
     // If the table already has columns, no need for auto schema creation
     let relation = pg_sys::relation_open(oid, pg_sys::AccessShareLock as i32);
@@ -256,4 +251,38 @@ fn construct_alter_table_statement(
         table_name,
         column_definitions.join(", ")
     )
+}
+
+#[inline]
+pub fn register_duckdb_view(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+    handler: FdwHandler,
+) -> Result<()> {
+    // Initialize DuckDB view
+    connection::execute(
+        format!("CREATE SCHEMA IF NOT EXISTS {schema_name}").as_str(),
+        [],
+    )?;
+
+    match handler {
+        FdwHandler::Csv => {
+            connection::create_csv_view(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Delta => {
+            connection::create_delta_view(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Iceberg => {
+            connection::create_iceberg_view(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Parquet => {
+            connection::create_parquet_view(table_name, schema_name, table_options)?;
+        }
+        _ => {
+            bail!("got unexpected fdw_handler")
+        }
+    };
+
+    Ok(())
 }

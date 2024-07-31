@@ -176,11 +176,9 @@ pub fn clear_arrow() {
     }
 }
 
-pub fn create_secret(
-    secret_name: &str,
-    user_mapping_options: HashMap<String, String>,
-) -> Result<usize> {
-    let statement = secret::create_secret(secret_name, user_mapping_options)?;
+pub fn create_secret(user_mapping_options: HashMap<String, String>) -> Result<usize> {
+    const DEFAULT_SECRET: &str = "default_secret";
+    let statement = secret::create_secret(DEFAULT_SECRET, user_mapping_options)?;
     execute(statement.as_str(), [])
 }
 
@@ -211,13 +209,17 @@ pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
     }
 }
 
-pub fn view_exists(table_name: &str, schema_name: &str) -> Result<bool> {
+pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
     unsafe {
         let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare(format!("SELECT * from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' AND table_type = 'VIEW'").as_str())?;
-        match statement.query([])?.next() {
-            Ok(Some(_)) => Ok(true),
-            _ => Ok(false),
+        let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
+        if let Ok(Some(row)) = statement.query([])?.next() {
+            let table_type: String = row.get(0)?;
+            let table_type = table_type.replace("BASE", "").trim().to_string();
+            let statement = format!("DROP {table_type} {schema_name}.{table_name}");
+            execute(statement.as_str(), [])?;
         }
     }
+
+    Ok(())
 }
