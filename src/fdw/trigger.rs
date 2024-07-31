@@ -118,7 +118,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
         );
     }
 
-    // Drop stale view
+    // Drop stale relation
     connection::drop_relation(table_name, schema_name)?;
 
     // Create DuckDB secrets
@@ -131,7 +131,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     // Create DuckDB relation
     let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
     let handler = FdwHandler::from(foreign_table);
-    register_duckdb_view(table_name, schema_name, table_options.clone(), handler)?;
+    create_duckdb_relation(table_name, schema_name, table_options.clone(), handler)?;
 
     // If the table already has columns, no need for auto schema creation
     let relation = pg_sys::relation_open(oid, pg_sys::AccessShareLock as i32);
@@ -255,13 +255,12 @@ fn construct_alter_table_statement(
 }
 
 #[inline]
-pub fn register_duckdb_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
     handler: FdwHandler,
 ) -> Result<()> {
-    // Initialize DuckDB view
     connection::execute(
         format!("CREATE SCHEMA IF NOT EXISTS {schema_name}").as_str(),
         [],
@@ -269,16 +268,16 @@ pub fn register_duckdb_view(
 
     match handler {
         FdwHandler::Csv => {
-            connection::create_csv_view(table_name, schema_name, table_options)?;
+            connection::create_csv_relation(table_name, schema_name, table_options)?;
         }
         FdwHandler::Delta => {
-            connection::create_delta_view(table_name, schema_name, table_options)?;
+            connection::create_delta_relation(table_name, schema_name, table_options)?;
         }
         FdwHandler::Iceberg => {
-            connection::create_iceberg_view(table_name, schema_name, table_options)?;
+            connection::create_iceberg_relation(table_name, schema_name, table_options)?;
         }
         FdwHandler::Parquet => {
-            connection::create_parquet_view(table_name, schema_name, table_options)?;
+            connection::create_parquet_relation(table_name, schema_name, table_options)?;
         }
         _ => {
             bail!("got unexpected fdw_handler")

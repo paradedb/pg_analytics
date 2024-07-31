@@ -108,25 +108,25 @@ fn get_global_arrow() -> &'static UnsafeCell<Option<duckdb::Arrow<'static>>> {
     unsafe { GLOBAL_ARROW.as_ref().expect("Arrow not initialized") }
 }
 
-pub fn create_csv_view(
+pub fn create_csv_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = csv::create_view(table_name, schema_name, table_options)?;
+    let statement = csv::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_delta_view(
+pub fn create_delta_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = delta::create_view(table_name, schema_name, table_options)?;
+    let statement = delta::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_iceberg_view(
+pub fn create_iceberg_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -136,16 +136,16 @@ pub fn create_iceberg_view(
         execute("LOAD iceberg", [])?;
     }
 
-    let statement = iceberg::create_view(table_name, schema_name, table_options)?;
+    let statement = iceberg::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_parquet_view(
+pub fn create_parquet_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = parquet::create_view(table_name, schema_name, table_options)?;
+    let statement = parquet::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 

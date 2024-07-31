@@ -46,7 +46,7 @@ impl DeltaOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -76,7 +76,7 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_delta_view() {
+    fn test_create_delta_relation() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
@@ -86,7 +86,7 @@ mod tests {
 
         let expected =
             "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM delta_scan('/data/delta')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
