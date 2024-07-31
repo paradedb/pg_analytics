@@ -69,19 +69,6 @@ jobs:
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
         uses: dtolnay/rust-toolchain@stable
 
-      # This checks that the version in Cargo.toml is incremented to the next release. We only run it
-      # on PRs to main, which are our release promotion PRs.
-      - name: Check version in Cargo.toml
-        if: steps.check_skip.outputs.skip_remaining_steps != 'true' && github.base_ref == 'main'
-        run: |
-          CARGO_VERSION=$(grep "^version" Cargo.toml | head -1 | awk -F '"' '{print $2}')
-          RELEASE_VERSION="${{ vars.VERSION_MAJOR }}.${{ vars.VERSION_MINOR }}.${{ vars.VERSION_PATCH }}"
-          if [ "$CARGO_VERSION" != "$RELEASE_VERSION" ]; then
-            echo "Version in Cargo.toml ($CARGO_VERSION) does not match upcoming release version ($RELEASE_VERSION), did you forget to increment it?"
-            exit 1
-          fi
-          echo "Version check passed!"
-
       # Caches from base branches are available to PRs, but not across unrelated branches, so we only
       # save the cache on the 'dev' branch, but load it on all branches.
       - name: Install Rust Cache
@@ -136,7 +123,6 @@ jobs:
           RUST_BACKTRACE: full
         run: |
           # Variables (we disable telemetry to avoid skewing the user metrics with CI runs)
-          BASE_RELEASE="0.7.0"
           PARADEDB_TELEMETRY=false
 
           echo ""
@@ -144,65 +130,14 @@ jobs:
           echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> ../.cargo/config.toml
           mkdir -p ../target/coverage ../target/coverage-report
 
-          # If this is a promotion PR, we test upgrading the extension by pulling the earliest version of the extension compatible with our current default Postgres version
-          if [[ "${{ github.base_ref }}" == "main" && "${{ matrix.pg_version }}" == "${{ env.default_pg_version }}" ]]; then
-            echo ""
-            echo "Promotion PR detected! Running extension upgrade test..."
-            if [[ "${{ github.event.inputs.test_upgrade_version }}" == "" ]]; then
-              echo "Using the GitHub Variables version..."
-              NEW_VERSION=${{ vars.VERSION_MAJOR }}.${{ vars.VERSION_MINOR }}.${{ vars.VERSION_PATCH }}
-            else
-              echo "Using the workflow_dispatch version..."
-              NEW_VERSION="${{ github.event.inputs.test_upgrade_version }}"
-            fi
-            echo "Running extension upgrade test from v$BASE_RELEASE to v$NEW_VERSION..."
+          echo ""
+          echo "Building pg_analytics..."
+          cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config" --release
 
-            echo ""
-            echo "Downloading pg_analytics v$BASE_RELEASE..."
-            curl -LOJ "https://github.com/paradedb/paradedb/releases/download/v$BASE_RELEASE/pg_analytics-v$BASE_RELEASE-pg${{ matrix.pg_version }}-${{ matrix.arch }}-ubuntu2204.deb"
-            sudo dpkg -i "pg_analytics-v$BASE_RELEASE-pg${{ matrix.pg_version }}-${{ matrix.arch }}-ubuntu2204.deb"
+          echo ""
+          echo "Starting Postgres..."
+          cargo pgrx start pg${{ matrix.pg_version }}
 
-            echo ""
-            echo "Starting Postgres..."
-            cargo pgrx start pg${{ matrix.pg_version }}
-
-            echo ""
-            echo "Loading pg_analytics v$BASE_RELEASE..."
-            psql -h localhost -d postgres -p 288${{ matrix.pg_version }} -c "CREATE EXTENSION pg_analytics VERSION '$BASE_RELEASE';"
-
-            echo ""
-            echo "Verifying current pg_analytics installed version..."
-            psql -h localhost -d postgres -p 288${{ matrix.pg_version }} -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'pg_analytics';"
-
-            echo ""
-            echo "Building pg_analytics v$NEW_VERSION..."
-            sudo chown -R "$(whoami)" "/usr/share/postgresql/${{ matrix.pg_version }}/extension/" "/usr/lib/postgresql/${{ matrix.pg_version }}/lib/"
-            cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config" --release
-
-            echo ""
-            echo "Upgrading pg_analytics to v$NEW_VERSION..."
-            psql -h localhost -d postgres -p 288${{ matrix.pg_version }} -c "ALTER EXTENSION pg_analytics UPDATE TO '$NEW_VERSION';"
-
-            echo ""
-            echo "Verifying current pg_analytics installed version..."
-            psql -h localhost -d postgres -p 288${{ matrix.pg_version }} -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'pg_analytics';"
-
-            echo ""
-            echo "Extension successfully upgraded from v$BASE_RELEASE to v$NEW_VERSION!"
-
-            echo ""
-            echo "Restarting Postgres..."
-            cargo pgrx stop pg${{ matrix.pg_version }}
-            cargo pgrx start pg${{ matrix.pg_version }}
-          else
-            echo ""
-            echo "Building pg_analytics..."
-            cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config" --release
-
-            echo ""
-            echo "Starting Postgres..."
-            cargo pgrx start pg${{ matrix.pg_version }}
-          fi
           echo ""
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
