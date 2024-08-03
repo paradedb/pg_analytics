@@ -14,149 +14,70 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
-use pgrx::iter::TableIterator;
+
 use pgrx::*;
-use std::fmt::{Display, Formatter};
-
-pub enum TimeBucketInput {
-    Date(Date),
-    Timestamp(Timestamp),
-}
-
-pub enum TimeBucketOffset {
-    Interval(Interval),
-    Date(Date),
-}
-
-impl Display for TimeBucketInput {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TimeBucketInput::Date(input) => {
-                write!(f, "{}::DATE", input)
-            }
-            TimeBucketInput::Timestamp(input) => {
-                write!(f, "{}", input)
-            }
-        }
-    }
-}
-
-impl Display for TimeBucketOffset {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TimeBucketOffset::Date(input) => {
-                write!(f, "DATE {}", input)
-            }
-            TimeBucketOffset::Interval(input) => {
-                write!(f, "INTERVAL {}", input)
-            }
-        }
-    }
-}
-
-fn create_time_bucket(
-    bucket_width: Interval,
-    input: TimeBucketInput,
-    offset: Option<TimeBucketOffset>,
-) -> String {
-    if let Some(bucket_offset) = offset {
-        format!(
-            "SELECT time_bucket(INTERVAL {}, {}, {});",
-            bucket_width, input, bucket_offset
-        )
-    } else {
-        format!("SELECT time_bucket(INTERVAL {}, {});", bucket_width, input)
-    }
-}
+use pgrx::iter::TableIterator;
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_no_offset(
-    bucket_width: Interval,
-    input: Date,
+    _bucket_width: Interval,
+    _input: Date,
 ) -> TableIterator<'static, (name!(time_bucket, Date),)> {
-    let bucket_query = create_time_bucket(bucket_width, TimeBucketInput::Date(input), None);
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_offset_date(
-    bucket_width: Interval,
-    input: Date,
-    offset: Date,
+    _bucket_width: Interval,
+    _input: Date,
+    _offset: Date,
 ) -> TableIterator<'static, (name!(time_bucket, Date),)> {
-    let bucket_query = create_time_bucket(
-        bucket_width,
-        TimeBucketInput::Date(input),
-        Some(TimeBucketOffset::Date(offset)),
-    );
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_offset_interval(
-    bucket_width: Interval,
-    input: Date,
-    offset: Interval,
+    _bucket_width: Interval,
+    _input: Date,
+    _offset: Interval,
 ) -> TableIterator<'static, (name!(time_bucket, Date),)> {
-    let bucket_query = create_time_bucket(
-        bucket_width,
-        TimeBucketInput::Date(input),
-        Some(TimeBucketOffset::Interval(offset)),
-    );
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp(
-    bucket_width: Interval,
-    input: Timestamp,
+    _bucket_width: Interval,
+    _input: Timestamp,
 ) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
-    let bucket_query = create_time_bucket(bucket_width, TimeBucketInput::Timestamp(input), None);
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_date(
-    bucket_width: Interval,
-    input: Timestamp,
-    offset: Date,
+    _bucket_width: Interval,
+    _input: Timestamp,
+    _offset: Date,
 ) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
-    let bucket_query = create_time_bucket(
-        bucket_width,
-        TimeBucketInput::Timestamp(input),
-        Some(TimeBucketOffset::Date(offset)),
-    );
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_interval(
-    bucket_width: Interval,
-    input: Timestamp,
-    offset: Interval,
+    _bucket_width: Interval,
+    _input: Timestamp,
+    _offset: Interval,
 ) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
-    let bucket_query = create_time_bucket(
-        bucket_width,
-        TimeBucketInput::Timestamp(input),
-        Some(TimeBucketOffset::Interval(offset)),
-    );
-
-    TableIterator::once((bucket_query
+    TableIterator::once((""
         .parse()
         .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
