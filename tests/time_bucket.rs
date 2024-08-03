@@ -78,7 +78,6 @@ async fn test_time_bucket_minutes(mut conn: PgConnection, tempdir: TempDir) -> R
 
     assert_eq!(10, data.len());
 
-
     let data: Vec<(NaiveDateTime,)> = "SELECT time_bucket(INTERVAL '1 MINUTE', timestamp::TIMESTAMP, INTERVAL '5 MINUTE') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
@@ -86,7 +85,6 @@ async fn test_time_bucket_minutes(mut conn: PgConnection, tempdir: TempDir) -> R
 
     Ok(())
 }
-
 
 #[rstest]
 async fn test_time_bucket_years(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
@@ -105,7 +103,7 @@ async fn test_time_bucket_years(mut conn: PgConnection, tempdir: TempDir) -> Res
         "CREATE FOREIGN TABLE timeseries () SERVER parquet_server OPTIONS (files '{}')",
         parquet_path.to_str().unwrap()
     )
-        .execute(&mut conn);
+    .execute(&mut conn);
 
     #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
@@ -132,7 +130,6 @@ async fn test_time_bucket_years(mut conn: PgConnection, tempdir: TempDir) -> Res
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(10, data.len());
-
 
     let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '5 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
