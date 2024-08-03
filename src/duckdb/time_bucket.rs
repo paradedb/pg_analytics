@@ -32,10 +32,10 @@ impl Display for TimeBucketInput {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             TimeBucketInput::Date(input) => {
-                write!(f, "{}::DATE", input.to_string())
+                write!(f, "{}::DATE", input)
             }
             TimeBucketInput::Timestamp(input) => {
-                write!(f, "{}", input.to_string())
+                write!(f, "{}", input)
             }
         }
     }
@@ -45,10 +45,10 @@ impl Display for TimeBucketOffset {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             TimeBucketOffset::Date(input) => {
-                write!(f, "DATE {}", input.to_string())
+                write!(f, "DATE {}", input)
             }
             TimeBucketOffset::Interval(input) => {
-                write!(f, "INTERVAL {}", input.to_string())
+                write!(f, "INTERVAL {}", input)
             }
         }
     }

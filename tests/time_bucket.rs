@@ -26,6 +26,7 @@ use shared::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use shared::fixtures::tempfile::TempDir;
 use sqlx::PgConnection;
 use std::fs::File;
+use time::Date;
 
 #[rstest]
 async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
@@ -46,6 +47,7 @@ async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()
     )
     .execute(&mut conn);
 
+    #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {}
         Err(error) => {
@@ -56,6 +58,7 @@ async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()
         }
     }
 
+    #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {
             panic!(
@@ -74,6 +77,11 @@ async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(10, data.len());
+
+    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '1 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+        .fetch_result(&mut conn).unwrap();
+
+    assert_eq!(1, data.len());
 
     Ok(())
 }

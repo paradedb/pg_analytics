@@ -228,6 +228,7 @@ pub fn duckdb_conn() -> duckdb::Connection {
     duckdb::Connection::open_in_memory().unwrap()
 }
 
+#[allow(dead_code)]
 pub fn time_series_record_batch() -> Result<RecordBatch> {
     // Define the fields for each datatype
     let fields = vec![
