@@ -229,7 +229,7 @@ pub fn duckdb_conn() -> duckdb::Connection {
 }
 
 #[allow(dead_code)]
-pub fn time_series_record_batch() -> Result<RecordBatch> {
+pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
     // Define the fields for each datatype
     let fields = vec![
         Field::new("value", DataType::Int32, false),
@@ -241,6 +241,30 @@ pub fn time_series_record_batch() -> Result<RecordBatch> {
     let start_time = DateTime::from_timestamp(60, 0).unwrap();
     let timestamps: Vec<i64> = (0..10)
         .map(|i| (start_time + Duration::minutes(i)).timestamp_millis())
+        .collect();
+
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1, -1, 0, 2, 3, 4, 5, 6, 7, 8])),
+            Arc::new(TimestampMillisecondArray::from(timestamps)),
+        ],
+    )?)
+}
+
+#[allow(dead_code)]
+pub fn time_series_record_batch_years() -> Result<RecordBatch> {
+    // Define the fields for each datatype
+    let fields = vec![
+        Field::new("value", DataType::Int32, false),
+        Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
+    ];
+
+    let schema = Arc::new(Schema::new(fields));
+
+    let start_time = DateTime::from_timestamp(60, 0).unwrap();
+    let timestamps: Vec<i64> = (0..10)
+        .map(|i| (start_time + Duration::days(i * 366)).timestamp_millis())
         .collect();
 
     Ok(RecordBatch::try_new(

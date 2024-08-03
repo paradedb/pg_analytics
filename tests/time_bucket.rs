@@ -29,8 +29,8 @@ use std::fs::File;
 use time::Date;
 
 #[rstest]
-async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
-    let stored_batch = time_series_record_batch()?;
+async fn test_time_bucket_minutes(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = time_series_record_batch_minutes()?;
     let parquet_path = tempdir.path().join("test_arrow_types.parquet");
     let parquet_file = File::create(&parquet_path)?;
 
@@ -78,10 +78,70 @@ async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()
 
     assert_eq!(10, data.len());
 
+
+    let data: Vec<(NaiveDateTime,)> = "SELECT time_bucket(INTERVAL '1 MINUTE', timestamp::TIMESTAMP, INTERVAL '5 MINUTE') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+        .fetch_result(&mut conn).unwrap();
+
+    assert_eq!(10, data.len());
+
+    Ok(())
+}
+
+
+#[rstest]
+async fn test_time_bucket_years(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = time_series_record_batch_years()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "MyTable")
+        .execute(&mut conn);
+
+    format!(
+        "CREATE FOREIGN TABLE timeseries () SERVER parquet_server OPTIONS (files '{}')",
+        parquet_path.to_str().unwrap()
+    )
+        .execute(&mut conn);
+
+    #[allow(clippy::single_match)]
+    match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
+        Ok(_) => {}
+        Err(error) => {
+            panic!(
+                "should have successfully called time_bucket() for timeseries data: {}",
+                error
+            );
+        }
+    }
+
+    #[allow(clippy::single_match)]
+    match "SELECT time_bucket(INTERVAL '2 DAY') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
+        Ok(_) => {
+            panic!(
+                "should have failed call to time_bucket() for timeseries data with incorrect parameters"
+            );
+        }
+        Err(_) => {}
+    }
+
     let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '1 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
-    assert_eq!(1, data.len());
+    assert_eq!(10, data.len());
 
+
+    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '5 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+        .fetch_result(&mut conn).unwrap();
+
+    assert_eq!(2, data.len());
+
+    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '2 YEAR', timestamp::DATE, DATE '1980-01-01') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+        .fetch_result(&mut conn).unwrap();
+
+    assert_eq!(5, data.len());
     Ok(())
 }
