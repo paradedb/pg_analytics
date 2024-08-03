@@ -20,15 +20,19 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
 };
-
+use std::sync::Arc;
 use anyhow::Result;
 use async_std::task::block_on;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::primitives::ByteStream;
+use chrono::{DateTime, Duration};
 use datafusion::{
     arrow::{datatypes::FieldRef, record_batch::RecordBatch},
     parquet::arrow::ArrowWriter,
 };
+use datafusion::arrow::array::{Int32Array, TimestampMillisecondArray};
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::datatypes::TimeUnit::Millisecond;
 use futures::future::{BoxFuture, FutureExt};
 use rstest::*;
 use serde::Serialize;
@@ -222,4 +226,27 @@ pub fn tempfile() -> std::fs::File {
 #[fixture]
 pub fn duckdb_conn() -> duckdb::Connection {
     duckdb::Connection::open_in_memory().unwrap()
+}
+
+pub fn time_series_record_batch() -> Result<RecordBatch> {
+    // Define the fields for each datatype
+    let fields = vec![
+        Field::new("value", DataType::Int32, false),
+        Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
+    ];
+
+    let schema = Arc::new(Schema::new(fields));
+
+    let start_time = DateTime::from_timestamp(60, 0).unwrap();
+    let timestamps: Vec<i64> = (0..10)
+        .map(|i| (start_time + Duration::minutes(i)).timestamp_millis())
+        .collect();
+
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1, -1, 0, 2, 3, 4, 5, 6, 7, 8])),
+            Arc::new(TimestampMillisecondArray::from(timestamps)),
+        ],
+    )?)
 }
