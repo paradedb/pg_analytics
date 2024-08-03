@@ -22,7 +22,7 @@ use chrono::NaiveDateTime;
 use datafusion::parquet::arrow::ArrowWriter;
 use fixtures::*;
 use rstest::*;
-use shared::fixtures::arrow::{primitive_setup_fdw_local_file_listing};
+use shared::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use shared::fixtures::tempfile::TempDir;
 use sqlx::PgConnection;
 use std::fs::File;
@@ -44,7 +44,7 @@ async fn test_time_bucket(mut conn: PgConnection, tempdir: TempDir) -> Result<()
         "CREATE FOREIGN TABLE timeseries () SERVER parquet_server OPTIONS (files '{}')",
         parquet_path.to_str().unwrap()
     )
-        .execute(&mut conn);
+    .execute(&mut conn);
 
     match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {}

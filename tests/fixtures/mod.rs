@@ -15,30 +15,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use std::{
-    fs::{self, File},
-    io::Read,
-    path::{Path, PathBuf},
-};
-use std::sync::Arc;
 use anyhow::Result;
 use async_std::task::block_on;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use chrono::{DateTime, Duration};
+use datafusion::arrow::array::{Int32Array, TimestampMillisecondArray};
+use datafusion::arrow::datatypes::TimeUnit::Millisecond;
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::{
     arrow::{datatypes::FieldRef, record_batch::RecordBatch},
     parquet::arrow::ArrowWriter,
 };
-use datafusion::arrow::array::{Int32Array, TimestampMillisecondArray};
-use datafusion::arrow::datatypes::{DataType, Field, Schema};
-use datafusion::arrow::datatypes::TimeUnit::Millisecond;
 use futures::future::{BoxFuture, FutureExt};
 use rstest::*;
 use serde::Serialize;
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use shared::fixtures::tempfile::TempDir;
 use sqlx::PgConnection;
+use std::sync::Arc;
+use std::{
+    fs::{self, File},
+    io::Read,
+    path::{Path, PathBuf},
+};
 use testcontainers::ContainerAsync;
 use testcontainers_modules::{
     localstack::LocalStack,

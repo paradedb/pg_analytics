@@ -77,8 +77,8 @@ pub fn time_bucket_date_no_offset(
     let bucket_query = create_time_bucket(bucket_width, TimeBucketInput::Date(input), None);
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -94,8 +94,8 @@ pub fn time_bucket_date_offset_date(
     );
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -111,8 +111,8 @@ pub fn time_bucket_date_offset_interval(
     );
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -123,8 +123,8 @@ pub fn time_bucket_timestamp(
     let bucket_query = create_time_bucket(bucket_width, TimeBucketInput::Timestamp(input), None);
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -140,8 +140,8 @@ pub fn time_bucket_timestamp_offset_date(
     );
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -157,6 +157,6 @@ pub fn time_bucket_timestamp_offset_interval(
     );
 
     TableIterator::once((bucket_query
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
