@@ -159,7 +159,7 @@ async fn test_time_bucket_fallback(mut conn: PgConnection) -> Result<()> {
         }
         Err(error) => {
             let a = error.to_string().contains(error_message);
-            assert_eq!(true, a);
+            assert!(a);
         }
     }
 
