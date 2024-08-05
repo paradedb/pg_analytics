@@ -43,20 +43,12 @@ fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8) -> Timesta
     ).unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error)))
 }
 
-fn get_hours_delta(micros: i64, input: u8) -> u8 {
-    let micros_to_hours = (micros / HOURS_PER_MICRO) as u8;
-    if micros_to_hours == 0 {
+fn get_micros_delta(micros: i64, input: u8, divisor: i64) -> u8 {
+    let micros_quotient = (micros / divisor) as u8;
+    if micros_quotient == 0 {
         return 0;
     }
-    input % micros_to_hours
-}
-
-fn get_minutes_delta(micros: i64, input: u8) -> u8 {
-    let micros_to_minutes = (micros / MINUTES_PER_MICRO) as u8;
-    if micros_to_minutes == 0 {
-        return 0;
-    }
-    input % micros_to_minutes
+    input % micros_quotient
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -86,7 +78,7 @@ pub fn time_bucket_date_no_offset(
     ).unwrap())
 }
 
-// TODO: Need to implement offset
+// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_offset_date(
     _bucket_width: Interval,
@@ -98,7 +90,7 @@ pub fn time_bucket_date_offset_date(
                              .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
-// TODO: Need to implement offset
+// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_offset_interval(
     _bucket_width: Interval,
@@ -126,8 +118,8 @@ pub fn time_bucket_timestamp(
         let delta = input.day() as i32 % bucket_width.days();
         return set_timestamp(input.year(), input.month(), input.day() - delta as u8, input.hour(), input.minute())
     } else if bucket_width.micros() != 0 {
-        let hours_delta = get_hours_delta(bucket_width.micros(), input.hour());
-        let minutes_delta = get_minutes_delta(bucket_width.micros(), input.minute());
+        let hours_delta = get_micros_delta(bucket_width.micros(), input.hour(), HOURS_PER_MICRO);
+        let minutes_delta = get_micros_delta(bucket_width.micros(), input.minute(), MINUTES_PER_MICRO);
         return set_timestamp(input.year(), input.month(), input.day(), input.hour() - hours_delta, input.minute() - minutes_delta)
     }
 
@@ -141,7 +133,7 @@ pub fn time_bucket_timestamp(
     ).unwrap()
 }
 
-// TODO: Need to implement offset
+// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_date(
     _bucket_width: Interval,
@@ -153,7 +145,7 @@ pub fn time_bucket_timestamp_offset_date(
                              .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
-// TODO: Need to implement offset
+// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_interval(
     _bucket_width: Interval,
