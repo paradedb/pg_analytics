@@ -19,7 +19,6 @@ use anyhow::Result;
 use duckdb::types::Value;
 use pgrx::*;
 
-use crate::duckdb::connection;
 use crate::duckdb::utils;
 use crate::env::get_global_connection;
 

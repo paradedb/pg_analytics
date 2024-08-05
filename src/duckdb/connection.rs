@@ -17,7 +17,7 @@
 
 use anyhow::{anyhow, Result};
 use duckdb::arrow::array::RecordBatch;
-use duckdb::{Connection, Params, Statement};
+use duckdb::{Params, Statement};
 use signal_hook::consts::signal::*;
 use signal_hook::iterator::Signals;
 use std::cell::UnsafeCell;
@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
 
-use crate::env::{get_global_connection, postgres_data_dir_path, postgres_database_oid};
+use crate::env::get_global_connection;
 
 use super::csv;
 use super::delta;
@@ -34,7 +34,6 @@ use super::parquet;
 use super::secret;
 
 // Global mutable static variables
-static mut GLOBAL_CONNECTION: Option<UnsafeCell<Connection>> = None;
 static mut GLOBAL_STATEMENT: Option<UnsafeCell<Option<Statement<'static>>>> = None;
 static mut GLOBAL_ARROW: Option<UnsafeCell<Option<duckdb::Arrow<'static>>>> = None;
 static INIT: Once = Once::new();
@@ -57,14 +56,12 @@ fn init_globals() {
 }
 
 fn iceberg_loaded() -> Result<bool> {
-    unsafe {
-        let conn = get_global_connection();
-        let conn = conn.lock().unwrap();
-        let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
-        match statement.query([])?.next() {
-            Ok(Some(_)) => Ok(true),
-            _ => Ok(false),
-        }
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
+    let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
+    match statement.query([])?.next() {
+        Ok(Some(_)) => Ok(true),
+        _ => Ok(false),
     }
 }
 
@@ -182,24 +179,20 @@ pub fn get_batches() -> Result<Vec<RecordBatch>> {
 }
 
 pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
-    unsafe {
-        let conn = get_global_connection();
-        let conn = conn.lock().unwrap();
-        conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
-    }
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
+    conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
 }
 
 pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
-    unsafe {
-        let conn = get_global_connection();
-        let conn = conn.lock().unwrap();
-        let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
-        if let Ok(Some(row)) = statement.query([])?.next() {
-            let table_type: String = row.get(0)?;
-            let table_type = table_type.replace("BASE", "").trim().to_string();
-            let statement = format!("DROP {table_type} {schema_name}.{table_name}");
-            execute(statement.as_str(), [])?;
-        }
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
+    let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
+    if let Ok(Some(row)) = statement.query([])?.next() {
+        let table_type: String = row.get(0)?;
+        let table_type = table_type.replace("BASE", "").trim().to_string();
+        let statement = format!("DROP {table_type} {schema_name}.{table_name}");
+        execute(statement.as_str(), [])?;
     }
 
     Ok(())

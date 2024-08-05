@@ -18,7 +18,6 @@
 use anyhow::Result;
 use pgrx::*;
 
-use crate::duckdb::connection;
 use crate::duckdb::utils;
 use crate::env::get_global_connection;
 
