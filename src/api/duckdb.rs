@@ -2,6 +2,7 @@ use anyhow::Result;
 use pgrx::*;
 
 use crate::duckdb::connection;
+use crate::env::get_global_connection;
 
 type DuckdbSettingsRow = (
     Option<String>,
@@ -36,7 +37,8 @@ pub fn duckdb_settings() -> iter::TableIterator<
 
 #[inline]
 fn duckdb_settings_impl() -> Result<Vec<DuckdbSettingsRow>> {
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
     let mut stmt = conn.prepare("SELECT * FROM duckdb_settings()")?;
 
     Ok(stmt

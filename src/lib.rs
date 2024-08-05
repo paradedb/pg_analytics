@@ -22,6 +22,7 @@ mod fdw;
 mod hooks;
 mod schema;
 
+use env::DUCKDB_CONNECTION;
 use hooks::ExtensionHook;
 use pgrx::*;
 use shared::{
@@ -44,6 +45,7 @@ pub extern "C" fn _PG_init() {
     };
 
     GUCS.init("pg_analytics");
+    pg_shmem_init!(DUCKDB_CONNECTION);
 
     // TODO: Change to ParadeExtension::PgAnalytics
     setup_telemetry_background_worker(ParadeExtension::PgLakehouse);

@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
 
-use crate::env::{postgres_data_dir_path, postgres_database_oid};
+use crate::env::{get_global_connection, postgres_data_dir_path, postgres_database_oid};
 
 use super::csv;
 use super::delta;
@@ -40,20 +40,7 @@ static mut GLOBAL_ARROW: Option<UnsafeCell<Option<duckdb::Arrow<'static>>>> = No
 static INIT: Once = Once::new();
 
 fn init_globals() {
-    let mut duckdb_path = postgres_data_dir_path();
-    duckdb_path.push("pg_analytics");
-
-    if !duckdb_path.exists() {
-        std::fs::create_dir_all(duckdb_path.clone())
-            .expect("failed to create duckdb data directory");
-    }
-
-    duckdb_path.push(postgres_database_oid().to_string());
-    duckdb_path.set_extension("db3");
-
-    let conn = Connection::open(duckdb_path).expect("failed to open duckdb connection");
     unsafe {
-        GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
         GLOBAL_ARROW = Some(UnsafeCell::new(None));
     }
@@ -62,7 +49,8 @@ fn init_globals() {
         let mut signals =
             Signals::new([SIGTERM, SIGINT, SIGQUIT]).expect("error registering signal listener");
         for _ in signals.forever() {
-            let conn = unsafe { &mut *get_global_connection().get() };
+            let conn = get_global_connection();
+            let conn = conn.lock().unwrap();
             conn.interrupt();
         }
     });
@@ -70,23 +58,13 @@ fn init_globals() {
 
 fn iceberg_loaded() -> Result<bool> {
     unsafe {
-        let conn = &mut *get_global_connection().get();
+        let conn = get_global_connection();
+        let conn = conn.lock().unwrap();
         let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
         match statement.query([])?.next() {
             Ok(Some(_)) => Ok(true),
             _ => Ok(false),
         }
-    }
-}
-
-pub fn get_global_connection() -> &'static UnsafeCell<Connection> {
-    INIT.call_once(|| {
-        init_globals();
-    });
-    unsafe {
-        GLOBAL_CONNECTION
-            .as_ref()
-            .expect("Connection not initialized")
     }
 }
 
@@ -151,7 +129,8 @@ pub fn create_parquet_relation(
 
 pub fn create_arrow(sql: &str) -> Result<bool> {
     unsafe {
-        let conn = &mut *get_global_connection().get();
+        let conn = get_global_connection();
+        let conn = conn.lock().unwrap();
         let statement = conn.prepare(sql)?;
         let static_statement: Statement<'static> = std::mem::transmute(statement);
 
@@ -204,14 +183,16 @@ pub fn get_batches() -> Result<Vec<RecordBatch>> {
 
 pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
     unsafe {
-        let conn = &*get_global_connection().get();
+        let conn = get_global_connection();
+        let conn = conn.lock().unwrap();
         conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
     }
 }
 
 pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
     unsafe {
-        let conn = &mut *get_global_connection().get();
+        let conn = get_global_connection();
+        let conn = conn.lock().unwrap();
         let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
         if let Ok(Some(row)) = statement.query([])?.next() {
             let table_type: String = row.get(0)?;

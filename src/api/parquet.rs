@@ -20,6 +20,7 @@ use pgrx::*;
 
 use crate::duckdb::connection;
 use crate::duckdb::utils;
+use crate::env::get_global_connection;
 
 type ParquetSchemaRow = (
     Option<String>,
@@ -88,7 +89,8 @@ pub fn parquet_schema(
 #[inline]
 fn parquet_schema_impl(files: &str) -> Result<Vec<ParquetSchemaRow>> {
     let schema_str = utils::format_csv(files);
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
     let query = format!("SELECT * FROM parquet_schema({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 
@@ -115,7 +117,8 @@ fn parquet_schema_impl(files: &str) -> Result<Vec<ParquetSchemaRow>> {
 #[inline]
 fn parquet_describe_impl(files: &str) -> Result<Vec<ParquetDescribeRow>> {
     let schema_str = utils::format_csv(files);
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
     let query = format!("DESCRIBE SELECT * FROM {schema_str}");
     let mut stmt = conn.prepare(&query)?;
 

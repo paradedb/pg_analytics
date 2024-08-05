@@ -22,6 +22,7 @@ use std::ffi::CStr;
 use supabase_wrappers::prelude::{options_to_hashmap, user_mapping_options};
 
 use crate::duckdb::connection;
+use crate::env::get_global_connection;
 use crate::fdw::handler::FdwHandler;
 
 extension_sql!(
@@ -143,7 +144,8 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     pg_sys::RelationClose(relation);
 
     // Get DuckDB schema
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection();
+    let conn = conn.lock().unwrap();
     let query = format!("DESCRIBE {schema_name}.{table_name}");
     let mut stmt = conn.prepare(&query)?;
 
