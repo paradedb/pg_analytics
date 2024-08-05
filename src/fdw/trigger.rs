@@ -144,7 +144,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     pg_sys::RelationClose(relation);
 
     // Get DuckDB schema
-    let conn = get_global_connection();
+    let conn = get_global_connection()?;
     let conn = conn.lock().unwrap();
     let query = format!("DESCRIBE {schema_name}.{table_name}");
     let mut stmt = conn.prepare(&query)?;

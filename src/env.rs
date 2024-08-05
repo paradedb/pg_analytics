@@ -1,16 +1,17 @@
+use anyhow::{anyhow, Result};
 use duckdb::Connection;
 use pgrx::*;
 use std::ffi::CStr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DuckdbConnection(pub Arc<Mutex<Connection>>);
 unsafe impl PGRXSharedMemory for DuckdbConnection {}
 
 // One connection per database, so 128 databases can have a DuckDB connection
 const MAX_CONNECTIONS: usize = 128;
-pub static DUCKDB_CONNECTION: PgLwLock<
+pub static DUCKDB_CONNECTION_CACHE: PgLwLock<
     heapless::FnvIndexMap<u32, DuckdbConnection, MAX_CONNECTIONS>,
 > = PgLwLock::new();
 
@@ -32,15 +33,26 @@ impl Default for DuckdbConnection {
     }
 }
 
-pub fn get_global_connection() -> Arc<Mutex<Connection>> {
-    match DUCKDB_CONNECTION.exclusive().entry(postgres_database_oid()) {
-        heapless::Entry::Occupied(entry) => entry.get().0.clone(),
-        heapless::Entry::Vacant(entry) => {
-            let conn = DuckdbConnection::default();
-            let _ = entry.insert(conn.clone());
-            conn.0.clone()
-        }
+pub fn get_global_connection() -> Result<Arc<Mutex<Connection>>> {
+    let database_id = postgres_database_oid();
+    let connection_cached = DUCKDB_CONNECTION_CACHE.share().contains_key(&database_id);
+
+    if !connection_cached {
+        let conn = DuckdbConnection::default();
+        return Ok(DUCKDB_CONNECTION_CACHE
+            .exclusive()
+            .insert(database_id, conn)
+            .expect("failed to cache connection")
+            .unwrap()
+            .0);
     }
+
+    Ok(DUCKDB_CONNECTION_CACHE
+        .share()
+        .get(&database_id)
+        .ok_or_else(|| anyhow!("connection not found"))?
+        .0
+        .clone())
 }
 
 pub fn postgres_data_dir_path() -> PathBuf {

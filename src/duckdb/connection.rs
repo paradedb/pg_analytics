@@ -48,7 +48,7 @@ fn init_globals() {
         let mut signals =
             Signals::new([SIGTERM, SIGINT, SIGQUIT]).expect("error registering signal listener");
         for _ in signals.forever() {
-            let conn = get_global_connection();
+            let conn = get_global_connection().expect("failed to get connection");
             let conn = conn.lock().unwrap();
             conn.interrupt();
         }
@@ -56,7 +56,7 @@ fn init_globals() {
 }
 
 fn iceberg_loaded() -> Result<bool> {
-    let conn = get_global_connection();
+    let conn = get_global_connection()?;
     let conn = conn.lock().unwrap();
     let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
     match statement.query([])?.next() {
@@ -126,7 +126,7 @@ pub fn create_parquet_relation(
 
 pub fn create_arrow(sql: &str) -> Result<bool> {
     unsafe {
-        let conn = get_global_connection();
+        let conn = get_global_connection()?;
         let conn = conn.lock().unwrap();
         let statement = conn.prepare(sql)?;
         let static_statement: Statement<'static> = std::mem::transmute(statement);
@@ -179,13 +179,13 @@ pub fn get_batches() -> Result<Vec<RecordBatch>> {
 }
 
 pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
-    let conn = get_global_connection();
+    let conn = get_global_connection()?;
     let conn = conn.lock().unwrap();
     conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
 }
 
 pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
-    let conn = get_global_connection();
+    let conn = get_global_connection()?;
     let conn = conn.lock().unwrap();
     let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
     if let Ok(Some(row)) = statement.query([])?.next() {
