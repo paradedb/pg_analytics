@@ -131,7 +131,7 @@ async fn test_recreated_view(mut conn: PgConnection, tempdir: TempDir) -> Result
 }
 
 #[rstest]
-async fn test_preserve_casing(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+async fn test_preserve_casing_column_name(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
     let stored_batch = record_batch_with_casing()?;
     let parquet_path = tempdir.path().join("test_casing.parquet");
     let parquet_file = File::create(&parquet_path)?;
@@ -145,6 +145,30 @@ async fn test_preserve_casing(mut conn: PgConnection, tempdir: TempDir) -> Resul
 
     let retrieved_batch: Vec<(bool,)> = "SELECT \"Boolean_Col\" FROM primitive".fetch(&mut conn);
     assert_eq!(retrieved_batch.len(), 3);
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_preserve_casing_table_name(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "MyTable")
+        .execute(&mut conn);
+
+    format!(
+        r#"CREATE FOREIGN TABLE "PrimitiveTable" () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')"#,
+        parquet_path.to_str().unwrap()
+    ).execute(&mut conn);
+
+    let count: (i64,) = r#"SELECT COUNT(*) FROM "PrimitiveTable" LIMIT 1"#.fetch_one(&mut conn);
+    assert_eq!(count.0, 3);
 
     Ok(())
 }

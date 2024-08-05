@@ -17,11 +17,12 @@
 
 use anyhow::{bail, Result};
 use pgrx::*;
+use std::collections::HashMap;
 use std::ffi::CStr;
 use supabase_wrappers::prelude::{options_to_hashmap, user_mapping_options};
 
-use super::base::register_duckdb_view;
 use crate::duckdb::connection;
+use crate::env::get_global_connection;
 use crate::fdw::handler::FdwHandler;
 
 extension_sql!(
@@ -118,24 +119,20 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
         );
     }
 
-    // Drop stale view
-    connection::execute(
-        format!("DROP VIEW IF EXISTS {schema_name}.{table_name}").as_str(),
-        [],
-    )?;
+    // Drop stale relation
+    connection::drop_relation(table_name, schema_name)?;
 
-    // Register DuckDB view
+    // Create DuckDB secrets
     let foreign_server = unsafe { pg_sys::GetForeignServer((*foreign_table).serverid) };
     let user_mapping_options = unsafe { user_mapping_options(foreign_server) };
+    if !user_mapping_options.is_empty() {
+        connection::create_secret(user_mapping_options)?;
+    }
+
+    // Create DuckDB relation
     let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
     let handler = FdwHandler::from(foreign_table);
-    register_duckdb_view(
-        table_name,
-        schema_name,
-        table_options.clone(),
-        user_mapping_options,
-        handler,
-    )?;
+    create_duckdb_relation(table_name, schema_name, table_options.clone(), handler)?;
 
     // If the table already has columns, no need for auto schema creation
     let relation = pg_sys::relation_open(oid, pg_sys::AccessShareLock as i32);
@@ -147,7 +144,8 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     pg_sys::RelationClose(relation);
 
     // Get DuckDB schema
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection()?;
+    let conn = conn.lock().unwrap();
     let query = format!("DESCRIBE {schema_name}.{table_name}");
     let mut stmt = conn.prepare(&query)?;
 
@@ -253,7 +251,40 @@ fn construct_alter_table_statement(
 
     format!(
         "ALTER TABLE {} {}",
-        table_name,
+        spi::quote_identifier(table_name),
         column_definitions.join(", ")
     )
+}
+
+#[inline]
+pub fn create_duckdb_relation(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+    handler: FdwHandler,
+) -> Result<()> {
+    connection::execute(
+        format!("CREATE SCHEMA IF NOT EXISTS {schema_name}").as_str(),
+        [],
+    )?;
+
+    match handler {
+        FdwHandler::Csv => {
+            connection::create_csv_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Delta => {
+            connection::create_delta_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Iceberg => {
+            connection::create_iceberg_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Parquet => {
+            connection::create_parquet_relation(table_name, schema_name, table_options)?;
+        }
+        _ => {
+            bail!("got unexpected fdw_handler")
+        }
+    };
+
+    Ok(())
 }

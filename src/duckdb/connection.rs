@@ -17,13 +17,15 @@
 
 use anyhow::{anyhow, Result};
 use duckdb::arrow::array::RecordBatch;
-use duckdb::{Connection, Params, Statement};
+use duckdb::{Params, Statement};
 use signal_hook::consts::signal::*;
 use signal_hook::iterator::Signals;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
+
+use crate::env::get_global_connection;
 
 use super::csv;
 use super::delta;
@@ -32,15 +34,12 @@ use super::parquet;
 use super::secret;
 
 // Global mutable static variables
-static mut GLOBAL_CONNECTION: Option<UnsafeCell<Connection>> = None;
 static mut GLOBAL_STATEMENT: Option<UnsafeCell<Option<Statement<'static>>>> = None;
 static mut GLOBAL_ARROW: Option<UnsafeCell<Option<duckdb::Arrow<'static>>>> = None;
 static INIT: Once = Once::new();
 
 fn init_globals() {
-    let conn = Connection::open_in_memory().expect("failed to open duckdb connection");
     unsafe {
-        GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
         GLOBAL_ARROW = Some(UnsafeCell::new(None));
     }
@@ -49,31 +48,20 @@ fn init_globals() {
         let mut signals =
             Signals::new([SIGTERM, SIGINT, SIGQUIT]).expect("error registering signal listener");
         for _ in signals.forever() {
-            let conn = unsafe { &mut *get_global_connection().get() };
+            let conn = get_global_connection().expect("failed to get connection");
+            let conn = conn.lock().unwrap();
             conn.interrupt();
         }
     });
 }
 
 fn iceberg_loaded() -> Result<bool> {
-    unsafe {
-        let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
-        match statement.query([])?.next() {
-            Ok(Some(_)) => Ok(true),
-            _ => Ok(false),
-        }
-    }
-}
-
-pub fn get_global_connection() -> &'static UnsafeCell<Connection> {
-    INIT.call_once(|| {
-        init_globals();
-    });
-    unsafe {
-        GLOBAL_CONNECTION
-            .as_ref()
-            .expect("Connection not initialized")
+    let conn = get_global_connection()?;
+    let conn = conn.lock().unwrap();
+    let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
+    match statement.query([])?.next() {
+        Ok(Some(_)) => Ok(true),
+        _ => Ok(false),
     }
 }
 
@@ -95,25 +83,25 @@ fn get_global_arrow() -> &'static UnsafeCell<Option<duckdb::Arrow<'static>>> {
     unsafe { GLOBAL_ARROW.as_ref().expect("Arrow not initialized") }
 }
 
-pub fn create_csv_view(
+pub fn create_csv_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = csv::create_view(table_name, schema_name, table_options)?;
+    let statement = csv::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_delta_view(
+pub fn create_delta_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = delta::create_view(table_name, schema_name, table_options)?;
+    let statement = delta::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_iceberg_view(
+pub fn create_iceberg_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -123,22 +111,23 @@ pub fn create_iceberg_view(
         execute("LOAD iceberg", [])?;
     }
 
-    let statement = iceberg::create_view(table_name, schema_name, table_options)?;
+    let statement = iceberg::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
-pub fn create_parquet_view(
+pub fn create_parquet_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    let statement = parquet::create_view(table_name, schema_name, table_options)?;
+    let statement = parquet::create_duckdb_relation(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
 pub fn create_arrow(sql: &str) -> Result<bool> {
     unsafe {
-        let conn = &mut *get_global_connection().get();
+        let conn = get_global_connection()?;
+        let conn = conn.lock().unwrap();
         let statement = conn.prepare(sql)?;
         let static_statement: Statement<'static> = std::mem::transmute(statement);
 
@@ -163,11 +152,9 @@ pub fn clear_arrow() {
     }
 }
 
-pub fn create_secret(
-    secret_name: &str,
-    user_mapping_options: HashMap<String, String>,
-) -> Result<usize> {
-    let statement = secret::create_secret(secret_name, user_mapping_options)?;
+pub fn create_secret(user_mapping_options: HashMap<String, String>) -> Result<usize> {
+    const DEFAULT_SECRET: &str = "default_secret";
+    let statement = secret::create_secret(DEFAULT_SECRET, user_mapping_options)?;
     execute(statement.as_str(), [])
 }
 
@@ -192,19 +179,21 @@ pub fn get_batches() -> Result<Vec<RecordBatch>> {
 }
 
 pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
-    unsafe {
-        let conn = &*get_global_connection().get();
-        conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
-    }
+    let conn = get_global_connection()?;
+    let conn = conn.lock().unwrap();
+    conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
 }
 
-pub fn view_exists(table_name: &str, schema_name: &str) -> Result<bool> {
-    unsafe {
-        let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare(format!("SELECT * from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' AND table_type = 'VIEW'").as_str())?;
-        match statement.query([])?.next() {
-            Ok(Some(_)) => Ok(true),
-            _ => Ok(false),
-        }
+pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
+    let conn = get_global_connection()?;
+    let conn = conn.lock().unwrap();
+    let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
+    if let Ok(Some(row)) = statement.query([])?.next() {
+        let table_type: String = row.get(0)?;
+        let table_type = table_type.replace("BASE", "").trim().to_string();
+        let statement = format!("DROP {table_type} {schema_name}.{table_name}");
+        conn.execute(statement.as_str(), [])?;
     }
+
+    Ok(())
 }

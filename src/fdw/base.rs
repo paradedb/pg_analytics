@@ -15,18 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 
-use super::handler::FdwHandler;
 use crate::duckdb::connection;
 use crate::schema::cell::*;
-
-const DEFAULT_SECRET: &str = "default_secret";
 
 pub trait BaseFdw {
     // Getter methods
@@ -65,18 +62,11 @@ pub trait BaseFdw {
         // Cache target columns
         self.set_target_columns(columns);
 
-        // Register view with DuckDB
+        // Register secrets
         let user_mapping_options = self.get_user_mapping_options();
-        let foreign_table = unsafe { pg_sys::GetForeignTable(pg_relation.oid()) };
-        let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
-        let handler = FdwHandler::from(foreign_table);
-        register_duckdb_view(
-            table_name,
-            schema_name,
-            table_options,
-            user_mapping_options,
-            handler,
-        )?;
+        if !user_mapping_options.is_empty() {
+            connection::create_secret(user_mapping_options)?;
+        }
 
         // Ensure we are in the same DuckDB schema as the Postgres schema
         connection::execute(format!("SET SCHEMA '{schema_name}'").as_str(), [])?;
@@ -193,46 +183,6 @@ pub fn validate_options(opt_list: Vec<Option<String>>, valid_options: Vec<String
                 valid_options.join(", ")
             ));
         }
-    }
-
-    Ok(())
-}
-
-pub fn register_duckdb_view(
-    table_name: &str,
-    schema_name: &str,
-    table_options: HashMap<String, String>,
-    user_mapping_options: HashMap<String, String>,
-    handler: FdwHandler,
-) -> Result<()> {
-    if !user_mapping_options.is_empty() {
-        connection::create_secret(DEFAULT_SECRET, user_mapping_options)?;
-    }
-
-    if !connection::view_exists(table_name, schema_name)? {
-        // Initialize DuckDB view
-        connection::execute(
-            format!("CREATE SCHEMA IF NOT EXISTS {schema_name}").as_str(),
-            [],
-        )?;
-
-        match handler {
-            FdwHandler::Csv => {
-                connection::create_csv_view(table_name, schema_name, table_options)?;
-            }
-            FdwHandler::Delta => {
-                connection::create_delta_view(table_name, schema_name, table_options)?;
-            }
-            FdwHandler::Iceberg => {
-                connection::create_iceberg_view(table_name, schema_name, table_options)?;
-            }
-            FdwHandler::Parquet => {
-                connection::create_parquet_view(table_name, schema_name, table_options)?;
-            }
-            _ => {
-                bail!("got unexpected fdw_handler")
-            }
-        };
     }
 
     Ok(())

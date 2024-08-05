@@ -19,8 +19,8 @@ use anyhow::Result;
 use duckdb::types::Value;
 use pgrx::*;
 
-use crate::duckdb::connection;
 use crate::duckdb::utils;
+use crate::env::get_global_connection;
 
 type SniffCsvRow = (
     Option<String>,
@@ -70,7 +70,8 @@ fn sniff_csv_impl(files: &str, sample_size: Option<i64>) -> Result<Vec<SniffCsvR
     .flatten()
     .collect::<Vec<String>>()
     .join(", ");
-    let conn = unsafe { &*connection::get_global_connection().get() };
+    let conn = get_global_connection()?;
+    let conn = conn.lock().unwrap();
     let query = format!("SELECT * FROM sniff_csv({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 

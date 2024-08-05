@@ -22,6 +22,7 @@ use super::utils;
 
 pub enum ParquetOption {
     BinaryAsString,
+    Cache,
     FileName,
     FileRowNumber,
     Files,
@@ -37,6 +38,7 @@ impl ParquetOption {
     pub fn as_str(&self) -> &str {
         match self {
             Self::BinaryAsString => "binary_as_string",
+            Self::Cache => "cache",
             Self::FileName => "file_name",
             Self::FileRowNumber => "file_row_number",
             Self::Files => "files",
@@ -51,6 +53,7 @@ impl ParquetOption {
     pub fn is_required(&self) -> bool {
         match self {
             Self::BinaryAsString => false,
+            Self::Cache => false,
             Self::FileName => false,
             Self::FileRowNumber => false,
             Self::Files => true,
@@ -65,6 +68,7 @@ impl ParquetOption {
     pub fn iter() -> impl Iterator<Item = Self> {
         [
             Self::BinaryAsString,
+            Self::Cache,
             Self::FileName,
             Self::FileRowNumber,
             Self::Files,
@@ -78,7 +82,7 @@ impl ParquetOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -132,7 +136,14 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
+    let cache = table_options
+        .get(ParquetOption::Cache.as_str())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
 }
 
 #[cfg(test)]
@@ -141,14 +152,14 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_parquet_view_single_file() {
+    fn test_create_parquet_relation_single_file() {
         let table_name = "test";
         let schema_name = "main";
         let files = "/data/file.parquet";
         let table_options =
             HashMap::from([(ParquetOption::Files.as_str().to_string(), files.to_string())]);
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet('/data/file.parquet')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -160,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_parquet_view_multiple_files() {
+    fn test_create_parquet_relation_multiple_files() {
         let table_name = "test";
         let schema_name = "main";
         let files = "/data/file1.parquet, /data/file2.parquet";
@@ -168,7 +179,7 @@ mod tests {
             HashMap::from([(ParquetOption::Files.as_str().to_string(), files.to_string())]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet(['/data/file1.parquet', '/data/file2.parquet'])";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -180,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_parquet_view_with_options() {
+    fn test_create_parquet_relation_with_options() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([
@@ -219,7 +230,7 @@ mod tests {
         ]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet('/data/file.parquet', binary_as_string = true, filename = false, file_row_number = true, hive_partitioning = true, hive_types = {'release': DATE, 'orders': BIGINT}, hive_types_autocast = true, union_by_name = true)";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 

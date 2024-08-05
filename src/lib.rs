@@ -17,6 +17,7 @@
 
 mod api;
 mod duckdb;
+mod env;
 mod fdw;
 mod hooks;
 mod schema;
@@ -43,6 +44,7 @@ pub extern "C" fn _PG_init() {
     };
 
     GUCS.init("pg_analytics");
+    pg_shmem_init!(env::DUCKDB_CONNECTION_CACHE);
 
     // TODO: Change to ParadeExtension::PgAnalytics
     setup_telemetry_background_worker(ParadeExtension::PgLakehouse);
