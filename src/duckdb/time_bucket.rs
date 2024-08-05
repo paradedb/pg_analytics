@@ -22,25 +22,15 @@ const HOURS_PER_MICRO: i64 = 3600000000;
 const MINUTES_PER_MICRO: i64 = 60000000;
 
 fn set_date(year: i32, month: u8, day: u8) -> Date {
-    return Date::from(Timestamp::new(
-        year,
-        month,
-        day,
-        0,
-        0,
-        0f64,
-    ).unwrap_or_else(|error| panic!("There was an error in date creation: {}", error)))
+    return Date::from(
+        Timestamp::new(year, month, day, 0, 0, 0f64)
+            .unwrap_or_else(|error| panic!("There was an error in date creation: {}", error)),
+    );
 }
 
 fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8) -> Timestamp {
-    return Timestamp::new(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        0f64,
-    ).unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error)))
+    return Timestamp::new(year, month, day, hour, minute, 0f64)
+        .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error));
 }
 
 fn get_micros_delta(micros: i64, input: u8, divisor: i64) -> u8 {
@@ -52,30 +42,20 @@ fn get_micros_delta(micros: i64, input: u8, divisor: i64) -> u8 {
 }
 
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_date_no_offset(
-    bucket_width: Interval,
-    input: Date,
-) -> Date {
+pub fn time_bucket_date_no_offset(bucket_width: Interval, input: Date) -> Date {
     let years = bucket_width.months() / 12;
     if years != 0 {
         let delta = input.year() as i32 % years;
-        return set_date(input.year() - delta, input.month(), input.day())
+        return set_date(input.year() - delta, input.month(), input.day());
     } else if bucket_width.months() != 0 {
         let delta = input.month() as i32 % bucket_width.months();
-        return set_date(input.year(), input.month() - delta as u8, input.day())
+        return set_date(input.year(), input.month() - delta as u8, input.day());
     } else if bucket_width.days() != 0 {
         let delta = input.day() as i32 % bucket_width.days();
-        return set_date(input.year(), input.month(), input.day() - delta as u8)
+        return set_date(input.year(), input.month(), input.day() - delta as u8);
     }
 
-    Date::from(Timestamp::new(
-        input.year(),
-        input.month(),
-        input.day(),
-        0,
-        0,
-        0f64,
-    ).unwrap())
+    Date::from(Timestamp::new(input.year(), input.month(), input.day(), 0, 0, 0f64).unwrap())
 }
 
 // TODO: Need to implement offset for pg
@@ -86,8 +66,8 @@ pub fn time_bucket_date_offset_date(
     _offset: Date,
 ) -> TableIterator<'static, (name!(time_bucket, Date),)> {
     TableIterator::once((""
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 // TODO: Need to implement offset for pg
@@ -98,29 +78,51 @@ pub fn time_bucket_date_offset_interval(
     _offset: Interval,
 ) -> TableIterator<'static, (name!(time_bucket, Date),)> {
     TableIterator::once((""
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_timestamp(
-    bucket_width: Interval,
-    input: Timestamp,
-) -> Timestamp {
+pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timestamp {
     let years = bucket_width.months() / 12;
     if years != 0 {
         let delta = input.year() as i32 % years;
-        return set_timestamp(input.year() - delta, input.month(), input.day(), input.hour(), input.minute())
+        return set_timestamp(
+            input.year() - delta,
+            input.month(),
+            input.day(),
+            input.hour(),
+            input.minute(),
+        );
     } else if bucket_width.months() != 0 {
         let delta = input.month() as i32 % bucket_width.months();
-        return set_timestamp(input.year(), input.month() - delta as u8, input.day(), input.hour(), input.minute())
+        return set_timestamp(
+            input.year(),
+            input.month() - delta as u8,
+            input.day(),
+            input.hour(),
+            input.minute(),
+        );
     } else if bucket_width.days() != 0 {
         let delta = input.day() as i32 % bucket_width.days();
-        return set_timestamp(input.year(), input.month(), input.day() - delta as u8, input.hour(), input.minute())
+        return set_timestamp(
+            input.year(),
+            input.month(),
+            input.day() - delta as u8,
+            input.hour(),
+            input.minute(),
+        );
     } else if bucket_width.micros() != 0 {
         let hours_delta = get_micros_delta(bucket_width.micros(), input.hour(), HOURS_PER_MICRO);
-        let minutes_delta = get_micros_delta(bucket_width.micros(), input.minute(), MINUTES_PER_MICRO);
-        return set_timestamp(input.year(), input.month(), input.day(), input.hour() - hours_delta, input.minute() - minutes_delta)
+        let minutes_delta =
+            get_micros_delta(bucket_width.micros(), input.minute(), MINUTES_PER_MICRO);
+        return set_timestamp(
+            input.year(),
+            input.month(),
+            input.day(),
+            input.hour() - hours_delta,
+            input.minute() - minutes_delta,
+        );
     }
 
     Timestamp::new(
@@ -130,7 +132,8 @@ pub fn time_bucket_timestamp(
         input.hour(),
         input.minute(),
         0f64,
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 // TODO: Need to implement offset for pg
@@ -141,8 +144,8 @@ pub fn time_bucket_timestamp_offset_date(
     _offset: Date,
 ) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
     TableIterator::once((""
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
 
 // TODO: Need to implement offset for pg
@@ -153,6 +156,6 @@ pub fn time_bucket_timestamp_offset_interval(
     _offset: Interval,
 ) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
     TableIterator::once((""
-                             .parse()
-                             .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+        .parse()
+        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
 }
