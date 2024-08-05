@@ -39,12 +39,10 @@ pub fn get_global_connection() -> Result<Arc<Mutex<Connection>>> {
 
     if !connection_cached {
         let conn = DuckdbConnection::default();
-        return Ok(DUCKDB_CONNECTION_CACHE
+        DUCKDB_CONNECTION_CACHE
             .exclusive()
             .insert(database_id, conn)
-            .expect("failed to cache connection")
-            .unwrap()
-            .0);
+            .expect("failed to cache connection");
     }
 
     Ok(DUCKDB_CONNECTION_CACHE
