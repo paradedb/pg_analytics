@@ -22,15 +22,15 @@ const HOURS_PER_MICRO: i64 = 3600000000;
 const MINUTES_PER_MICRO: i64 = 60000000;
 
 fn set_date(year: i32, month: u8, day: u8) -> Date {
-    return Date::from(
+    Date::from(
         Timestamp::new(year, month, day, 0, 0, 0f64)
             .unwrap_or_else(|error| panic!("There was an error in date creation: {}", error)),
-    );
+    )
 }
 
 fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8) -> Timestamp {
-    return Timestamp::new(year, month, day, hour, minute, 0f64)
-        .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error));
+    Timestamp::new(year, month, day, hour, minute, 0f64)
+        .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error))
 }
 
 fn get_micros_delta(micros: i64, input: u8, divisor: i64) -> u8 {
@@ -45,7 +45,7 @@ fn get_micros_delta(micros: i64, input: u8, divisor: i64) -> u8 {
 pub fn time_bucket_date_no_offset(bucket_width: Interval, input: Date) -> Date {
     let years = bucket_width.months() / 12;
     if years != 0 {
-        let delta = input.year() as i32 % years;
+        let delta = input.year() % years;
         return set_date(input.year() - delta, input.month(), input.day());
     } else if bucket_width.months() != 0 {
         let delta = input.month() as i32 % bucket_width.months();
@@ -86,7 +86,7 @@ pub fn time_bucket_date_offset_interval(
 pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timestamp {
     let years = bucket_width.months() / 12;
     if years != 0 {
-        let delta = input.year() as i32 % years;
+        let delta = input.year() % years;
         return set_timestamp(
             input.year() - delta,
             input.month(),
