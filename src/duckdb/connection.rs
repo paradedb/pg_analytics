@@ -192,7 +192,7 @@ pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
         let table_type: String = row.get(0)?;
         let table_type = table_type.replace("BASE", "").trim().to_string();
         let statement = format!("DROP {table_type} {schema_name}.{table_name}");
-        execute(statement.as_str(), [])?;
+        conn.execute(statement.as_str(), [])?;
     }
 
     Ok(())
