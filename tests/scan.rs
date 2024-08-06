@@ -287,3 +287,25 @@ async fn test_create_heap_from_parquet(mut conn: PgConnection, tempdir: TempDir)
 
     Ok(())
 }
+
+#[rstest]
+async fn test_query_with_json_cast(mut conn: PgConnection) -> Result<()> {
+    let query_str = r#"SELECT to_json('foo'::text), to_jsonb('bar'::text), '{"a": 2}'::json"#;
+    let fetched_row = query_str.fetch_result::<(
+        sqlx::types::Json<String>,
+        sqlx::types::Json<String>,
+        sqlx::types::Json<HashMap<String, i64>>,
+    )>(&mut conn)?;
+
+    let expected_row = vec![(
+        Json::from("foo".to_string()),
+        Json::from("bar".to_string()),
+        Json::from(
+            [("a".to_string(), 2)]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+        ),
+    )];
+    assert_eq!(fetched_row, expected_row);
+    Ok(())
+}
