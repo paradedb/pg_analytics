@@ -42,7 +42,13 @@ fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8, second: f6
         .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error))
 }
 
-fn calculate_time_bucket(bucket_width_seconds: i128, input_unix_epoch: i128, months: i32) -> i128 {
+fn calculate_time_bucket(bucket_width_seconds: i128, input_unix_epoch: i128, months: i32, override_origin_epoch: Option<i128>) -> i128 {
+    if let Some(new_origin_epoch) = override_origin_epoch {
+        let truncated_input_unix_epoch =
+            ((input_unix_epoch - new_origin_epoch) / bucket_width_seconds) * bucket_width_seconds;
+        return new_origin_epoch + truncated_input_unix_epoch;
+    }
+
     if months != 0 {
         let truncated_input_unix_epoch =
             ((input_unix_epoch - ORIGIN_UNIX_EPOCH) / bucket_width_seconds) * bucket_width_seconds;
@@ -63,6 +69,7 @@ pub fn time_bucket_date(bucket_width: Interval, input: Date) -> Date {
         bucket_width_seconds,
         input_unix_epoch,
         bucket_width.months(),
+        None
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -78,10 +85,13 @@ pub fn time_bucket_date_origin(bucket_width: Interval, input: Date, origin: Date
 
     let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
     let input_unix_epoch = (input.to_unix_epoch_days() as i64 * SECONDS_IN_DAY) as i128;
-    let truncated_input_unix_epoch =
-        ((input_unix_epoch - new_origin_epoch) / bucket_width_seconds) * bucket_width_seconds;
 
-    let bucket_date = ORIGIN_UNIX_EPOCH + truncated_input_unix_epoch;
+    let bucket_date = calculate_time_bucket(
+        bucket_width_seconds,
+        input_unix_epoch,
+        bucket_width.months(),
+        Some(new_origin_epoch)
+    );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
         set_date(dt.year(), dt.month(), dt.day())
@@ -113,10 +123,12 @@ pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timest
                 error
             )
         });
+
     let bucket_date = calculate_time_bucket(
         bucket_width_seconds,
         input_unix_epoch.and_utc().timestamp() as i128,
         bucket_width.months(),
+        None
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -133,16 +145,44 @@ pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timest
     }
 }
 
-// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_date(
-    _bucket_width: Interval,
-    _input: Timestamp,
-    _offset: Date,
-) -> TableIterator<'static, (name!(time_bucket, Timestamp),)> {
-    TableIterator::once((""
-        .parse()
-        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+    bucket_width: Interval,
+    input: Timestamp,
+    origin: Date,
+) -> Timestamp {
+    let new_origin_epoch = (origin.to_unix_epoch_days() as i64 * SECONDS_IN_DAY) as i128;
+
+    let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
+    let input_string = input.to_iso_string();
+    let input_unix_epoch = NaiveDateTime::parse_from_str(&input_string, "%Y-%m-%dT%H:%M:%S")
+        .unwrap_or_else(|error| {
+            panic!(
+                "there was an error parsing the set TIMESTAMP value as a string: {}",
+                error
+            )
+        });
+
+    let bucket_date = calculate_time_bucket(
+        bucket_width_seconds,
+        input_unix_epoch.and_utc().timestamp() as i128,
+        bucket_width.months(),
+        Some(new_origin_epoch)
+    );
+
+    if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
+        set_timestamp(
+            dt.year(),
+            dt.month() as u8,
+            dt.day() as u8,
+            dt.hour() as u8,
+            dt.minute() as u8,
+            dt.second() as f64,
+        )
+    } else {
+        panic!("There was a problem setting the native datetime from provided unix epoch.")
+    }
+
 }
 
 // TODO: Need to implement offset for pg
