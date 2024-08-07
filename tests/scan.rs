@@ -18,8 +18,11 @@
 mod fixtures;
 
 use std::fs::File;
+use std::sync::Arc;
 
 use anyhow::Result;
+use datafusion::arrow::array::*;
+use datafusion::arrow::datatypes::DataType;
 use datafusion::parquet::arrow::ArrowWriter;
 use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
@@ -28,11 +31,11 @@ use rstest::*;
 use shared::fixtures::arrow::{
     delta_primitive_record_batch, primitive_record_batch, primitive_setup_fdw_local_file_delta,
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
-    primitive_setup_fdw_s3_listing,
+    primitive_setup_fdw_s3_listing, setup_fdw_local_parquet_file_listing, FieldSpec,
 };
 use shared::fixtures::tempfile::TempDir;
 use sqlx::postgres::types::PgInterval;
-use sqlx::types::{BigDecimal, Json, Uuid};
+use sqlx::types::{BigDecimal, Json, JsonValue, Uuid};
 use sqlx::PgConnection;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -40,6 +43,33 @@ use time::macros::{date, datetime, time};
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";
+
+fn json_string_record_batch() -> Result<(RecordBatch, FieldSpec)> {
+    let field_spec = FieldSpec::from(vec![
+        ("id_col", DataType::Int64, false, "bigint"),
+        ("small_col", DataType::Utf8, false, "text"),
+        ("large_col", DataType::LargeUtf8, false, "text"),
+    ]);
+
+    let data = vec![
+        Some("[]"),
+        Some("{}"),
+        Some(r#"{ "name": "joe", "age": 12 }"#),
+        Some(r#"["john", "jane"]"#),
+    ];
+
+    let schema = Arc::new(field_spec.arrow_schema());
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3, 4])),
+            Arc::new(StringArray::from(data.clone())),
+            Arc::new(LargeStringArray::from(data)),
+        ],
+    )?;
+
+    Ok((batch, field_spec))
+}
 
 #[rstest]
 async fn test_trip_count(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
@@ -289,13 +319,10 @@ async fn test_create_heap_from_parquet(mut conn: PgConnection, tempdir: TempDir)
 }
 
 #[rstest]
-async fn test_query_with_json_cast(mut conn: PgConnection) -> Result<()> {
+async fn test_json_conversion_from_text(mut conn: PgConnection) -> Result<()> {
     let query_str = r#"SELECT to_json('foo'::text), to_jsonb('bar'::text), '{"a": 2}'::json"#;
-    let fetched_row = query_str.fetch_result::<(
-        sqlx::types::Json<String>,
-        sqlx::types::Json<String>,
-        sqlx::types::Json<HashMap<String, i64>>,
-    )>(&mut conn)?;
+    let fetched_row = query_str
+        .fetch_result::<(Json<String>, Json<String>, Json<HashMap<String, i64>>)>(&mut conn)?;
 
     let expected_row = vec![(
         Json::from("foo".to_string()),
@@ -307,5 +334,51 @@ async fn test_query_with_json_cast(mut conn: PgConnection) -> Result<()> {
         ),
     )];
     assert_eq!(fetched_row, expected_row);
+    Ok(())
+}
+
+#[rstest]
+async fn test_json_conversion_with_field_access(
+    mut conn: PgConnection,
+    tempdir: TempDir,
+) -> Result<()> {
+    let (stored_batch, fields_spec) = json_string_record_batch()?;
+    let parquet_path = tempdir
+        .path()
+        .join("test_json_cast_with_string_col.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    setup_fdw_local_parquet_file_listing(
+        parquet_path.as_path().to_str().unwrap(),
+        "json_table",
+        &fields_spec.postgres_schema(),
+    )
+    .execute(&mut conn);
+
+    let fetched_rows = "SELECT small_col::json->>'name', large_col::jsonb->>'age' FROM json_table WHERE id_col = 3"
+        .fetch_result::<(String, String)>(&mut conn)?;
+    assert_eq!(fetched_rows.len(), 1);
+    let expected_row = vec![("joe".to_string(), "12".to_string())];
+    assert_eq!(fetched_rows, expected_row);
+
+    let fetched_rows = "SELECT small_col::json, large_col::jsonb FROM json_table WHERE id_col = 4"
+        .fetch_result::<(Json<JsonValue>, Json<JsonValue>)>(&mut conn)?;
+    assert_eq!(fetched_rows.len(), 1);
+    let expected_row = vec![(
+        Json::from(JsonValue::from(vec![
+            "john".to_string(),
+            "jane".to_string(),
+        ])),
+        Json::from(JsonValue::from(vec![
+            "john".to_string(),
+            "jane".to_string(),
+        ])),
+    )];
+    assert_eq!(fetched_rows, expected_row);
+
     Ok(())
 }
