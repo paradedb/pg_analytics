@@ -49,6 +49,8 @@ fn calculate_time_bucket(bucket_width_seconds: i128, input_unix_epoch: i128, mon
         return new_origin_epoch + truncated_input_unix_epoch;
     }
 
+    // Please see: https://duckdb.org/docs/sql/functions/date.html#time_bucketbucket_width-date-origin
+    // DuckDB will change which origin it uses based on whether months are set in the INTERVAL.
     if months != 0 {
         let truncated_input_unix_epoch =
             ((input_unix_epoch - ORIGIN_UNIX_EPOCH) / bucket_width_seconds) * bucket_width_seconds;
@@ -65,6 +67,7 @@ fn calculate_time_bucket(bucket_width_seconds: i128, input_unix_epoch: i128, mon
 pub fn time_bucket_date(bucket_width: Interval, input: Date) -> Date {
     let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
     let input_unix_epoch = (input.to_unix_epoch_days() as i64 * SECONDS_IN_DAY) as i128;
+
     let bucket_date = calculate_time_bucket(
         bucket_width_seconds,
         input_unix_epoch,
@@ -116,6 +119,7 @@ pub fn time_bucket_date_offset(
 pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timestamp {
     let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
     let input_string = input.to_iso_string();
+
     let input_unix_epoch = NaiveDateTime::parse_from_str(&input_string, "%Y-%m-%dT%H:%M:%S")
         .unwrap_or_else(|error| {
             panic!(
@@ -155,6 +159,7 @@ pub fn time_bucket_timestamp_offset_date(
 
     let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
     let input_string = input.to_iso_string();
+
     let input_unix_epoch = NaiveDateTime::parse_from_str(&input_string, "%Y-%m-%dT%H:%M:%S")
         .unwrap_or_else(|error| {
             panic!(
