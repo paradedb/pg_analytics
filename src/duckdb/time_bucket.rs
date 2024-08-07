@@ -42,7 +42,12 @@ fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8, second: f6
         .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error))
 }
 
-fn calculate_time_bucket(bucket_width_seconds: i128, input_unix_epoch: i128, months: i32, override_origin_epoch: Option<i128>) -> i128 {
+fn calculate_time_bucket(
+    bucket_width_seconds: i128,
+    input_unix_epoch: i128,
+    months: i32,
+    override_origin_epoch: Option<i128>,
+) -> i128 {
     if let Some(new_origin_epoch) = override_origin_epoch {
         let truncated_input_unix_epoch =
             ((input_unix_epoch - new_origin_epoch) / bucket_width_seconds) * bucket_width_seconds;
@@ -72,7 +77,7 @@ pub fn time_bucket_date(bucket_width: Interval, input: Date) -> Date {
         bucket_width_seconds,
         input_unix_epoch,
         bucket_width.months(),
-        None
+        None,
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -93,7 +98,7 @@ pub fn time_bucket_date_origin(bucket_width: Interval, input: Date, origin: Date
         bucket_width_seconds,
         input_unix_epoch,
         bucket_width.months(),
-        Some(new_origin_epoch)
+        Some(new_origin_epoch),
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -132,7 +137,7 @@ pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timest
         bucket_width_seconds,
         input_unix_epoch.and_utc().timestamp() as i128,
         bucket_width.months(),
-        None
+        None,
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -172,7 +177,7 @@ pub fn time_bucket_timestamp_offset_date(
         bucket_width_seconds,
         input_unix_epoch.and_utc().timestamp() as i128,
         bucket_width.months(),
-        Some(new_origin_epoch)
+        Some(new_origin_epoch),
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -187,7 +192,6 @@ pub fn time_bucket_timestamp_offset_date(
     } else {
         panic!("There was a problem setting the native datetime from provided unix epoch.")
     }
-
 }
 
 // TODO: Need to implement offset for pg
