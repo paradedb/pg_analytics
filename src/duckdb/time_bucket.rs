@@ -47,12 +47,29 @@ fn calculate_time_bucket(
     input_unix_epoch: i128,
     months: i32,
     override_origin_epoch: Option<i128>,
+    override_offset_epoch: Option<i128>,
 ) -> i128 {
     if let Some(new_origin_epoch) = override_origin_epoch {
         let truncated_input_unix_epoch =
             ((input_unix_epoch - new_origin_epoch) / bucket_width_seconds) * bucket_width_seconds;
         return new_origin_epoch + truncated_input_unix_epoch;
     }
+
+    if let Some(new_offset_epoch) = override_offset_epoch {
+        if months != 0 {
+            let new_origin_epoch = (ORIGIN_UNIX_EPOCH - new_offset_epoch).abs();
+            let truncated_input_unix_epoch = ((input_unix_epoch - new_origin_epoch)
+                / bucket_width_seconds)
+                * bucket_width_seconds;
+            return new_origin_epoch + truncated_input_unix_epoch;
+        } else {
+            let new_origin_epoch = (DAYS_ORIGIN_UNIX_EPOCH - new_offset_epoch).abs();
+            let truncated_input_unix_epoch = ((input_unix_epoch - new_origin_epoch)
+                / bucket_width_seconds)
+                * bucket_width_seconds;
+            return new_origin_epoch + truncated_input_unix_epoch;
+        }
+    };
 
     // Please see: https://duckdb.org/docs/sql/functions/date.html#time_bucketbucket_width-date-origin
     // DuckDB will change which origin it uses based on whether months are set in the INTERVAL.
@@ -78,6 +95,7 @@ pub fn time_bucket_date(bucket_width: Interval, input: Date) -> Date {
         input_unix_epoch,
         bucket_width.months(),
         None,
+        None,
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -99,6 +117,7 @@ pub fn time_bucket_date_origin(bucket_width: Interval, input: Date, origin: Date
         input_unix_epoch,
         bucket_width.months(),
         Some(new_origin_epoch),
+        None,
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
@@ -108,16 +127,25 @@ pub fn time_bucket_date_origin(bucket_width: Interval, input: Date, origin: Date
     }
 }
 
-// TODO: Need to implement offset for pg
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_date_offset(
-    _bucket_width: Interval,
-    _input: Date,
-    _offset: Interval,
-) -> TableIterator<'static, (name!(time_bucket, Date),)> {
-    TableIterator::once((""
-        .parse()
-        .unwrap_or_else(|err| panic!("There was an error while parsing time_bucket(): {}", err)),))
+pub fn time_bucket_date_offset(bucket_width: Interval, input: Date, offset: Interval) -> Date {
+    let bucket_width_seconds = bucket_width.as_micros() / MICROS_PER_SECOND;
+    let offset_seconds = offset.as_micros() / MICROS_PER_SECOND;
+    let input_unix_epoch = (input.to_unix_epoch_days() as i64 * SECONDS_IN_DAY) as i128;
+
+    let bucket_date = calculate_time_bucket(
+        bucket_width_seconds,
+        input_unix_epoch,
+        bucket_width.months(),
+        None,
+        Some(offset_seconds),
+    );
+
+    if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
+        set_date(dt.year(), dt.month(), dt.day())
+    } else {
+        panic!("There was a problem setting the native datetime from provided unix epoch.")
+    }
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -137,6 +165,7 @@ pub fn time_bucket_timestamp(bucket_width: Interval, input: Timestamp) -> Timest
         bucket_width_seconds,
         input_unix_epoch.and_utc().timestamp() as i128,
         bucket_width.months(),
+        None,
         None,
     );
 
@@ -178,6 +207,7 @@ pub fn time_bucket_timestamp_offset_date(
         input_unix_epoch.and_utc().timestamp() as i128,
         bucket_width.months(),
         Some(new_origin_epoch),
+        None,
     );
 
     if let Some(dt) = DateTime::from_timestamp(bucket_date as i64, 0) {
