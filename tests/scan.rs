@@ -52,9 +52,12 @@ fn date_time_record_batch() -> Result<(RecordBatch, FieldSpec, Vec<String>)> {
         ("date64_col", DataType::Date64, false, "date"),
     ]);
     let dates = vec![
-        "2023-04-01 21:10:00 +0000".to_string(), "2023-04-01 22:08:00 +0000".to_string(),
-        "2023-04-02 04:55:00 +0000".to_string(), "2023-04-02 11:45:00 +0000".to_string(),
-        "2023-04-03 01:20:00 +0000".to_string(), "2023-04-03 12:30:00 +0000".to_string(),
+        "2023-04-01 21:10:00 +0000".to_string(),
+        "2023-04-01 22:08:00 +0000".to_string(),
+        "2023-04-02 04:55:00 +0000".to_string(),
+        "2023-04-02 11:45:00 +0000".to_string(),
+        "2023-04-03 01:20:00 +0000".to_string(),
+        "2023-04-03 12:30:00 +0000".to_string(),
     ];
     let (dates_i32, dates_i64): (Vec<_>, Vec<_>) = dates
         .iter()
@@ -360,7 +363,6 @@ async fn test_date_functions_support_with_local_file(
     let fetched_rows =
         "SELECT DATE_PART('day', date32_col), DATE_TRUNC('day', date64_col) FROM dates"
             .fetch_result::<(f64, chrono::DateTime<Utc>)>(&mut conn)?;
-
     assert_eq!(expected_rows.len(), fetched_rows.len());
     assert_eq!(expected_rows, fetched_rows);
 
