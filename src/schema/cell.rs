@@ -25,8 +25,9 @@ use duckdb::arrow::array::types::{
 };
 use duckdb::arrow::array::{
     timezone::Tz, Array, ArrayAccessor, ArrayRef, ArrowPrimitiveType, AsArray, BinaryArray,
-    BooleanArray, Decimal128Array, Float16Array, Float32Array, Float64Array, GenericByteArray,
-    Int16Array, Int32Array, Int64Array, Int8Array, LargeBinaryArray, StringArray,
+    BooleanArray, Date32Array, Date64Array, Decimal128Array, Float16Array, Float32Array,
+    Float64Array, GenericByteArray, Int16Array, Int32Array, Int64Array, Int8Array,
+    LargeBinaryArray, StringArray,
 };
 use duckdb::arrow::datatypes::{DataType, DecimalType, GenericStringType, IntervalUnit, TimeUnit};
 use pgrx::*;
@@ -1126,6 +1127,20 @@ where
                         None => Ok(None),
                     }
                 }
+                DataType::Date32 => match self.get_primitive_value::<Date32Array>(index)? {
+                    Some(timestamp_in_days) => {
+                        Ok(arrow_date32_to_postgres_timestamps(timestamp_in_days)?
+                            .map(Cell::Timestamptz))
+                    }
+                    None => Ok(None),
+                },
+                DataType::Date64 => match self.get_primitive_value::<Date64Array>(index)? {
+                    Some(timestamp_in_milliseconds) => Ok(arrow_date64_to_postgres_timestamps(
+                        timestamp_in_milliseconds,
+                    )?
+                    .map(Cell::Timestamptz)),
+                    None => Ok(None),
+                },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
                     name.to_string(),
                     unsupported.clone(),
