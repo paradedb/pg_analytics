@@ -31,6 +31,7 @@ use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
+use sqlx::prelude::FromRow;
 use sqlx::types::{BigDecimal, Json, Uuid};
 use sqlx::PgConnection;
 use std::collections::HashMap;
@@ -554,6 +555,27 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     let ret =
         "SELECT * FROM t1 LEFT JOIN t2 ON true LEFT JOIN t3 on true".execute_result(&mut conn);
     assert!(ret.is_ok(), "{:?}", ret);
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_json_cast_with_string_column(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = json_string_record_batch()?;
+    let parquet_path = tempdir.path().join("test_json_cast_with_string_col.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "json_table")
+        .execute(&mut conn);
+
+    let _batch = "SELECT * FROM json_table".fetch_recordbatch(&mut conn, &stored_batch.schema());
+
+    let rows: Vec<(String,)> = "SELECT json_col FROM json_table".fetch_result(&mut conn)?;
+    assert_eq!(rows.len(), 5);
 
     Ok(())
 }

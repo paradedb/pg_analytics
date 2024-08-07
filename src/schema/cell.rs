@@ -948,6 +948,7 @@ where
                 .into()),
             },
             pg_sys::TEXTOID | pg_sys::VARCHAROID | pg_sys::BPCHAROID | pg_sys::NAMEOID => {
+                info!("EVAN");
                 match self.data_type() {
                     DataType::Utf8 => match self.get_primitive_value::<StringArray>(index)? {
                         Some(value) => Ok(Some(Cell::String(value.to_string()))),
