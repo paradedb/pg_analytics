@@ -31,7 +31,6 @@ use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
-use sqlx::prelude::FromRow;
 use sqlx::types::{BigDecimal, Json, Uuid};
 use sqlx::PgConnection;
 use std::collections::HashMap;
