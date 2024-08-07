@@ -575,6 +575,5 @@ async fn test_json_cast_with_string_column(mut conn: PgConnection, tempdir: Temp
 
     let rows: Vec<(String,)> = "SELECT json_col FROM json_table".fetch_result(&mut conn)?;
     assert_eq!(rows.len(), 5);
-
     Ok(())
 }
