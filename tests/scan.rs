@@ -18,6 +18,7 @@
 mod fixtures;
 
 use std::fs::File;
+use std::sync::Arc;
 
 use crate::fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
@@ -28,6 +29,9 @@ use crate::fixtures::arrow::{
 use crate::fixtures::db::Query;
 use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
 use anyhow::Result;
+use chrono::{DateTime, Datelike, TimeZone, Utc};
+use datafusion::arrow::array::*;
+use datafusion::arrow::datatypes::DataType;
 use datafusion::parquet::arrow::ArrowWriter;
 use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
@@ -45,6 +49,39 @@ use crate::fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";
+
+fn date_time_record_batch() -> Result<(RecordBatch, FieldSpec, Vec<String>)> {
+    let field_spec = FieldSpec::from(vec![
+        ("date32_col", DataType::Date32, false, "date"),
+        ("date64_col", DataType::Date64, false, "date"),
+    ]);
+    let dates = vec![
+        "2023-04-01 21:10:00 +0000".to_string(), "2023-04-01 22:08:00 +0000".to_string(),
+        "2023-04-02 04:55:00 +0000".to_string(), "2023-04-02 11:45:00 +0000".to_string(),
+        "2023-04-03 01:20:00 +0000".to_string(), "2023-04-03 12:30:00 +0000".to_string(),
+    ];
+    let (dates_i32, dates_i64): (Vec<_>, Vec<_>) = dates
+        .iter()
+        .map(|date_str| {
+            let dt = date_str.parse::<DateTime<Utc>>().unwrap();
+            (
+                (dt.timestamp() / SECONDS_IN_DAY) as i32,
+                dt.timestamp_millis(),
+            )
+        })
+        .unzip();
+
+    let schema = Arc::new(field_spec.arrow_schema());
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Date32Array::from(dates_i32)),
+            Arc::new(Date64Array::from(dates_i64)),
+        ],
+    )?;
+
+    Ok((batch, field_spec, dates))
+}
 
 #[rstest]
 async fn test_trip_count(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
