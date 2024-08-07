@@ -1089,6 +1089,22 @@ where
                         None => Ok(None),
                     }
                 }
+                DataType::Date32 => match self.get_primitive_value::<Date32Array>(index)? {
+                    Some(timestamp_in_days) => {
+                        Ok(arrow_date32_to_postgres_timestamps(timestamp_in_days)?
+                            .map(Timestamp::from)
+                            .map(Cell::Timestamp))
+                    }
+                    None => Ok(None),
+                },
+                DataType::Date64 => match self.get_primitive_value::<Date64Array>(index)? {
+                    Some(timestamp_in_milliseconds) => Ok(arrow_date64_to_postgres_timestamps(
+                        timestamp_in_milliseconds,
+                    )?
+                    .map(Timestamp::from)
+                    .map(Cell::Timestamp)),
+                    None => Ok(None),
+                },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
                     name.to_string(),
                     unsupported.clone(),

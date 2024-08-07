@@ -56,9 +56,12 @@ fn date_time_record_batch() -> Result<(RecordBatch, FieldSpec, Vec<String>)> {
         ("date64_col", DataType::Date64, false, "date"),
     ]);
     let dates = vec![
-        "2023-04-01 21:10:00 +0000".to_string(), "2023-04-01 22:08:00 +0000".to_string(),
-        "2023-04-02 04:55:00 +0000".to_string(), "2023-04-02 11:45:00 +0000".to_string(),
-        "2023-04-03 01:20:00 +0000".to_string(), "2023-04-03 12:30:00 +0000".to_string(),
+        "2023-04-01 21:10:00 +0000".to_string(),
+        "2023-04-01 22:08:00 +0000".to_string(),
+        "2023-04-02 04:55:00 +0000".to_string(),
+        "2023-04-02 11:45:00 +0000".to_string(),
+        "2023-04-03 01:20:00 +0000".to_string(),
+        "2023-04-03 12:30:00 +0000".to_string(),
     ];
     let (dates_i32, dates_i64): (Vec<_>, Vec<_>) = dates
         .iter()
