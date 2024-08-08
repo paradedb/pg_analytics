@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use crate::fdw::base::OptionValidator;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
@@ -56,8 +57,8 @@ pub enum CsvOption {
     UnionByName,
 }
 
-impl CsvOption {
-    pub fn as_str(&self) -> &str {
+impl OptionValidator for CsvOption {
+    fn as_str(&self) -> &str {
         match self {
             Self::AllVarchar => "all_varchar",
             Self::AllowQuotedNulls => "allow_quoted_nulls",
@@ -95,7 +96,7 @@ impl CsvOption {
         }
     }
 
-    pub fn is_required(&self) -> bool {
+    fn is_required(&self) -> bool {
         match self {
             Self::AllVarchar => false,
             Self::AllowQuotedNulls => false,
@@ -133,7 +134,8 @@ impl CsvOption {
         }
     }
 
-    pub fn iter() -> impl Iterator<Item = Self> {
+    type Iter = std::array::IntoIter<Self, 33>;
+    fn iter() -> Self::Iter {
         [
             Self::AllVarchar,
             Self::AllowQuotedNulls,
