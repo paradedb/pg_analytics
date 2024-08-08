@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use duckdb::Connection;
 use pgrx::*;
-use std::collections::VecDeque;
 use std::ffi::CStr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
