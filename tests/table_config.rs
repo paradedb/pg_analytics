@@ -148,3 +148,73 @@ async fn test_preserve_casing(mut conn: PgConnection, tempdir: TempDir) -> Resul
 
     Ok(())
 }
+
+#[rstest]
+async fn test_preserve_casing_table_name(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "MyTable")
+        .execute(&mut conn);
+
+    format!(
+        r#"CREATE FOREIGN TABLE "PrimitiveTable" () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')"#,
+        parquet_path.to_str().unwrap()
+    ).execute(&mut conn);
+
+    let count: (i64,) = r#"SELECT COUNT(*) FROM "PrimitiveTable" LIMIT 1"#.fetch_one(&mut conn);
+    assert_eq!(count.0, 3);
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_table_with_custom_schema(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "MyTable")
+        .execute(&mut conn);
+
+    // test quoted schema name
+    "CREATE SCHEMA \"MY_SCHEMA\"".to_string().execute(&mut conn);
+    match
+        format!( "CREATE FOREIGN TABLE \"MY_SCHEMA\".\"MyTable\" () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
+                parquet_path.to_str().unwrap()
+        ).execute_result(&mut conn) {
+        Ok(_) => {}
+        Err(error) => {
+            panic!(
+                "should have successfully created table with custom schema \"MY_SCHEMA\".\"MyTable\": {}",
+                error
+            );
+        }
+    }
+
+    // test non-quoted schema name
+    "CREATE SCHEMA MY_SCHEMA".to_string().execute(&mut conn);
+    match
+        format!( "CREATE FOREIGN TABLE MY_SCHEMA.MyTable () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
+                parquet_path.to_str().unwrap()
+        ).execute_result(&mut conn) {
+        Ok(_) => {}
+        Err(error) => {
+            panic!(
+                "should have successfully created table with custom schema MY_SCHEMA.MyTable: {}",
+                error
+            );
+        }
+    }
+
+    Ok(())
+}
