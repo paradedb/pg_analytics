@@ -71,6 +71,10 @@ pub async fn executor_run(
         return Ok(());
     }
 
+    // Set DuckDB search path according search path in Postgres
+    // Make sure it could find unqualified relations.
+    set_search_path()?;
+
     match connection::create_arrow(query.as_str()) {
         Err(err) => {
             connection::clear_arrow();
