@@ -50,4 +50,3 @@ jobs:
       
       - name: Dependency Check
         run: cargo install cargo-machete && cargo machete
-        
