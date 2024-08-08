@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use duckdb::Connection;
 use pgrx::*;
+use std::collections::VecDeque;
 use std::ffi::CStr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -14,6 +15,8 @@ const MAX_CONNECTIONS: usize = 128;
 pub static DUCKDB_CONNECTION_CACHE: PgLwLock<
     heapless::FnvIndexMap<u32, DuckdbConnection, MAX_CONNECTIONS>,
 > = PgLwLock::new();
+
+pub static mut DUCKDB_CONNECTION_LRU: PgLwLock<VecDeque<u32>> = PgLwLock::new();
 
 impl Default for DuckdbConnection {
     fn default() -> Self {
@@ -35,18 +38,26 @@ impl Default for DuckdbConnection {
 
 pub fn get_global_connection() -> Result<Arc<Mutex<Connection>>> {
     let database_id = postgres_database_oid();
-    let connection_cached = DUCKDB_CONNECTION_CACHE.share().contains_key(&database_id);
 
-    if !connection_cached {
+    let mut cache = DUCKDB_CONNECTION_CACHE.exclusive();
+    let mut conn_order = unsafe { DUCKDB_CONNECTION_LRU.exclusive() };
+
+    if cache.get(&database_id).is_some() {
+        conn_order.retain(|&id| id != database_id);
+        conn_order.push_back(database_id);
+    } else {
+        if cache.len() >= MAX_CONNECTIONS {
+            if let Some(least_recently_used) = conn_order.pop_front() {
+                cache.remove(&least_recently_used);
+            }
+        }
+
         let conn = DuckdbConnection::default();
-        DUCKDB_CONNECTION_CACHE
-            .exclusive()
-            .insert(database_id, conn)
-            .expect("failed to cache connection");
+        let _ = cache.insert(database_id, conn);
+        conn_order.push_back(database_id);
     }
 
-    Ok(DUCKDB_CONNECTION_CACHE
-        .share()
+    Ok(cache
         .get(&database_id)
         .ok_or_else(|| anyhow!("connection not found"))?
         .0
@@ -64,4 +75,45 @@ pub fn postgres_data_dir_path() -> PathBuf {
 
 pub fn postgres_database_oid() -> u32 {
     unsafe { pg_sys::MyDatabaseId.as_u32() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lru_cache_behavior() {
+        {
+            let mut cache = DUCKDB_CONNECTION_CACHE.exclusive();
+            let mut order: PgLwLockExclusiveGuard<VecDeque<u32>> =
+                unsafe { DUCKDB_CONNECTION_LRU.exclusive() };
+            cache.clear();
+            order.clear();
+        }
+
+        // Insert MAX_CONNECTIONS + 1 connections to test eviction
+        for i in 0..=MAX_CONNECTIONS as u32 {
+            unsafe {
+                pg_sys::MyDatabaseId = i.into();
+            }
+
+            let _ = get_global_connection().expect("Failed to get a connection");
+        }
+
+        // Verify that the cache size does not exceed MAX_CONNECTIONS
+        let cache = DUCKDB_CONNECTION_CACHE.share();
+        assert_eq!(cache.len(), MAX_CONNECTIONS);
+
+        // Verify that the first inserted connection was evicted
+        let order = unsafe { DUCKDB_CONNECTION_LRU.share() };
+        let cache = DUCKDB_CONNECTION_CACHE.share();
+
+        assert!(!cache.contains_key(&0));
+        assert_eq!(order.len(), MAX_CONNECTIONS);
+
+        // Ensure all other inserted connections are still present
+        for i in 1..=MAX_CONNECTIONS as u32 {
+            assert!(cache.contains_key(&i));
+        }
+    }
 }
