@@ -16,7 +16,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 use chrono::{
-    DateTime, Datelike, Days, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, TimeZone, Timelike,
+    DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, TimeZone, Timelike,
 };
 use pgrx::*;
 use std::fmt::Debug;
@@ -24,47 +24,6 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::str::FromStr;
 
 const NANOSECONDS_IN_SECOND: u32 = 1_000_000_000;
-
-const MILLISECONDS_IN_SECOND: i64 = 1_000;
-
-const SECONDS_IN_DAY: i64 = 86_400;
-
-// Number of days between Apache Arrow / UNIX epoch (1970-01-01)
-// and PostgreSQL epoch (2000-01-01).
-const POSTGRES_BASE_DATE_OFFSET: Days = Days::new(10_957);
-
-/// Converts an [`i32`] stored in [`arrow::array::types::Date32Type`] to PostgresSQL TimestampWithTimeZone
-///
-/// Takes into account [`arrow::array::types::Date32Type`] stores the number of days
-/// elapsed since UNIX epoch (1970-01-01).
-/// Postgres [`datum::TimestampWithTimeZone`] type takes timestamp in microseconds
-/// with epoch (2000-01-01)
-#[inline(always)]
-pub(crate) fn arrow_date32_to_postgres_timestamps(
-    timestamp_in_days: i32,
-) -> Result<Option<TimestampWithTimeZone>, FromTimeError> {
-    arrow_date64_to_postgres_timestamps(
-        timestamp_in_days as i64 * SECONDS_IN_DAY * MILLISECONDS_IN_SECOND,
-    )
-}
-
-/// Converts an [`i64`] stored in [`arrow::array::types::Date64Type`] to PostgresSQL TimestampWithTimeZone
-///
-/// Takes into account [`arrow::array::types::Date64Type`] stores the number of milliseconds
-/// elapsed since UNIX epoch (1970-01-01).
-/// Postgres [`datum::TimestampWithTimeZone`] type takes timestamp in microseconds
-/// with epoch (2000-01-01)
-#[inline(always)]
-pub(crate) fn arrow_date64_to_postgres_timestamps(
-    timestamp_in_milliseconds: i64,
-) -> Result<Option<TimestampWithTimeZone>, FromTimeError> {
-    DateTime::from_timestamp_millis(timestamp_in_milliseconds)
-        .map(|date_time| date_time.naive_utc())
-        .and_then(|naive_date_time| naive_date_time.checked_sub_days(POSTGRES_BASE_DATE_OFFSET))
-        .map(|shifted_naive_date_time| shifted_naive_date_time.and_utc().timestamp_micros())
-        .map(TimestampWithTimeZone::try_from)
-        .transpose()
-}
 
 #[derive(Clone, Debug)]
 pub struct Date(pub NaiveDate);
