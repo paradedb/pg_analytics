@@ -19,6 +19,8 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use strum::{AsRefStr, EnumIter};
 
+use crate::fdw::base::OptionValidator;
+
 use super::utils;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
@@ -46,8 +48,8 @@ pub enum ParquetOption {
     // TODO: EncryptionConfig
 }
 
-impl ParquetOption {
-    pub fn is_required(&self) -> bool {
+impl OptionValidator for ParquetOption {
+    fn is_required(&self) -> bool {
         match self {
             Self::BinaryAsString => false,
             Self::FileName => false,
