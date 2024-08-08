@@ -48,9 +48,17 @@ fn init_globals() {
         let mut signals =
             Signals::new([SIGTERM, SIGINT, SIGQUIT]).expect("error registering signal listener");
         for _ in signals.forever() {
-            let conn = get_global_connection().expect("failed to get connection");
-            let conn = conn.lock().unwrap();
-            conn.interrupt();
+            match get_global_connection() {
+                Ok(conn) => {
+                    if let Err(err) = conn.lock() {
+                        eprintln!("Failed to acquire lock for connection: {}", err);
+                        continue;
+                    }
+                    let conn = conn.lock().unwrap();
+                    conn.interrupt();
+                }
+                Err(err) => eprintln!("Failed to get global connection: {}", err),
+            }
         }
     });
 }
