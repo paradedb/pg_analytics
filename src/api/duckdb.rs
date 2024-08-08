@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use pgrx::*;
 
 use crate::duckdb::connection;
@@ -38,7 +38,9 @@ pub fn duckdb_settings() -> iter::TableIterator<
 #[inline]
 fn duckdb_settings_impl() -> Result<Vec<DuckdbSettingsRow>> {
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     let mut stmt = conn.prepare("SELECT * FROM duckdb_settings()")?;
 
     Ok(stmt

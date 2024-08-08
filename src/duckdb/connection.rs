@@ -188,13 +188,17 @@ pub fn get_batches() -> Result<Vec<RecordBatch>> {
 
 pub fn execute<P: Params>(sql: &str, params: P) -> Result<usize> {
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     conn.execute(sql, params).map_err(|err| anyhow!("{err}"))
 }
 
 pub fn drop_relation(table_name: &str, schema_name: &str) -> Result<()> {
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     let mut statement = conn.prepare(format!("SELECT table_type from information_schema.tables WHERE table_schema = '{schema_name}' AND table_name = '{table_name}' LIMIT 1").as_str())?;
     if let Ok(Some(row)) = statement.query([])?.next() {
         let table_type: String = row.get(0)?;

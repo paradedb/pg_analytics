@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use pgrx::*;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -145,7 +145,9 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
 
     // Get DuckDB schema
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     let query = format!("DESCRIBE {schema_name}.{table_name}");
     let mut stmt = conn.prepare(&query)?;
 

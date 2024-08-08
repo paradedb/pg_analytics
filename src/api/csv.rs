@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use duckdb::types::Value;
 use pgrx::*;
 
@@ -71,7 +71,9 @@ fn sniff_csv_impl(files: &str, sample_size: Option<i64>) -> Result<Vec<SniffCsvR
     .collect::<Vec<String>>()
     .join(", ");
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     let query = format!("SELECT * FROM sniff_csv({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use pgrx::*;
 
 use crate::duckdb::utils;
@@ -89,7 +89,9 @@ pub fn parquet_schema(
 fn parquet_schema_impl(files: &str) -> Result<Vec<ParquetSchemaRow>> {
     let schema_str = utils::format_csv(files);
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow!("Failed to acquire lock: {}", e))?;
     let query = format!("SELECT * FROM parquet_schema({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 
