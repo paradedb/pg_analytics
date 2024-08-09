@@ -51,21 +51,10 @@ fn init_globals() {
     });
 }
 
-fn iceberg_loaded() -> Result<bool> {
+fn check_extension_loaded(extension_name: &str) -> Result<bool> {
     unsafe {
         let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
-        match statement.query([])?.next() {
-            Ok(Some(_)) => Ok(true),
-            _ => Ok(false),
-        }
-    }
-}
-
-fn spatial_loaded() -> Result<bool> {
-    unsafe {
-        let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'spacial' AND installed = true AND loaded = true")?;
+        let mut statement = conn.prepare(format!("SELECT * FROM duckdb_extensions() WHERE extension_name = '{extension_name}' AND installed = true AND loaded = true").as_str())?;
         match statement.query([])?.next() {
             Ok(Some(_)) => Ok(true),
             _ => Ok(false),
@@ -125,7 +114,7 @@ pub fn create_iceberg_view(
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    if !iceberg_loaded()? {
+    if !check_extension_loaded("iceberg")? {
         execute("INSTALL iceberg", [])?;
         execute("LOAD iceberg", [])?;
     }
@@ -148,7 +137,7 @@ pub fn create_spatial_view(
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    if !spatial_loaded()? {
+    if !check_extension_loaded("spatial")? {
         execute("INSTALL spatial", [])?;
         execute("LOAD spatial", [])?;
     }
