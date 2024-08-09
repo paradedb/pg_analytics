@@ -145,15 +145,18 @@ async fn test_time_bucket_years_duckdb(mut conn: PgConnection, tempdir: TempDir)
 
 #[rstest]
 async fn test_time_bucket_fallback(mut conn: PgConnection) -> Result<()> {
+    let error_message = "Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.";
     let trips_table = NycTripsTable::setup();
     trips_table.execute(&mut conn);
 
     #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY', tpep_pickup_datetime::DATE) AS bucket, AVG(trip_distance) as avg_value FROM nyc_trips GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {
+            panic!("Should have error'ed when calling time_bucket() on non-FDW data.")
         }
         Err(error) => {
-            panic!("Should not have error'ed when calling time_bucket() on non-FDW data: {}", error)
+            let a = error.to_string().contains(error_message);
+            assert!(a);
         }
     }
 
