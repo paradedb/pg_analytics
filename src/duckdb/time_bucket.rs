@@ -17,73 +17,40 @@
 
 use pgrx::*;
 
-fn set_date(year: i32, month: u8, day: u8) -> Date {
-    Date::from(
-        Timestamp::new(year, month, day, 0, 0, 0f64)
-            .unwrap_or_else(|error| panic!("There was an error in date creation: {}", error)),
-    )
-}
-
-fn set_timestamp(year: i32, month: u8, day: u8, hour: u8, minute: u8, second: f64) -> Timestamp {
-    Timestamp::new(year, month, day, hour, minute, second)
-        .unwrap_or_else(|error| panic!("There was an error in timestamp creation: {}", error))
+#[pg_extern(name = "time_bucket")]
+pub fn time_bucket_date(_bucket_width: Interval, _input: Date) -> Date {
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
 
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_date(_bucket_width: Interval, input: Date) -> Date {
-    set_date(input.year(), input.day(), input.month())
+pub fn time_bucket_date_origin(_bucket_width: Interval, _input: Date, _origin: Date) -> Date {
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
 
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_date_origin(_bucket_width: Interval, input: Date, _origin: Date) -> Date {
-    set_date(input.year(), input.day(), input.month())
+pub fn time_bucket_date_offset(_bucket_width: Interval, _input: Date, _offset: Interval) -> Date {
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
 
 #[pg_extern(name = "time_bucket")]
-pub fn time_bucket_date_offset(_bucket_width: Interval, input: Date, _offset: Interval) -> Date {
-    set_date(input.year(), input.day(), input.month())
-}
-
-#[pg_extern(name = "time_bucket")]
-pub fn time_bucket_timestamp(_bucket_width: Interval, input: Timestamp) -> Timestamp {
-    set_timestamp(
-        input.year(),
-        input.month(),
-        input.day(),
-        input.hour(),
-        input.minute(),
-        input.second(),
-    )
+pub fn time_bucket_timestamp(_bucket_width: Interval, _input: Timestamp) -> Timestamp {
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_date(
     _bucket_width: Interval,
-    input: Timestamp,
+    _input: Timestamp,
     _origin: Date,
 ) -> Timestamp {
-    set_timestamp(
-        input.year(),
-        input.month(),
-        input.day(),
-        input.hour(),
-        input.minute(),
-        input.second(),
-    )
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp_offset_interval(
     _bucket_width: Interval,
-    input: Timestamp,
+    _input: Timestamp,
     _offset: Interval,
 ) -> Timestamp {
-    set_timestamp(
-        input.year(),
-        input.month(),
-        input.day(),
-        input.hour(),
-        input.minute(),
-        input.second(),
-    )
+    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
 }
