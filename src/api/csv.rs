@@ -71,7 +71,10 @@ fn sniff_csv_impl(files: &str, sample_size: Option<i64>) -> Result<Vec<SniffCsvR
     .collect::<Vec<String>>()
     .join(", ");
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = match conn.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
     let query = format!("SELECT * FROM sniff_csv({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 

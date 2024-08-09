@@ -38,7 +38,10 @@ pub fn duckdb_settings() -> iter::TableIterator<
 #[inline]
 fn duckdb_settings_impl() -> Result<Vec<DuckdbSettingsRow>> {
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = match conn.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
     let mut stmt = conn.prepare("SELECT * FROM duckdb_settings()")?;
 
     Ok(stmt

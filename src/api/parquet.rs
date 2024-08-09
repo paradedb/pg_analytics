@@ -89,7 +89,10 @@ pub fn parquet_schema(
 fn parquet_schema_impl(files: &str) -> Result<Vec<ParquetSchemaRow>> {
     let schema_str = utils::format_csv(files);
     let conn = get_global_connection()?;
-    let conn = conn.lock().unwrap();
+    let conn = match conn.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    };
     let query = format!("SELECT * FROM parquet_schema({schema_str})");
     let mut stmt = conn.prepare(&query)?;
 

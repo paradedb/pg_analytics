@@ -15,6 +15,8 @@ pub static DUCKDB_CONNECTION_CACHE: PgLwLock<
     heapless::FnvIndexMap<u32, DuckdbConnection, MAX_CONNECTIONS>,
 > = PgLwLock::new();
 
+pub static mut DUCKDB_CONNECTION_LRU: PgLwLock<heapless::Deque<u32, 128>> = PgLwLock::new();
+
 impl Default for DuckdbConnection {
     fn default() -> Self {
         let mut duckdb_path = postgres_data_dir_path();
@@ -35,18 +37,40 @@ impl Default for DuckdbConnection {
 
 pub fn get_global_connection() -> Result<Arc<Mutex<Connection>>> {
     let database_id = postgres_database_oid();
-    let connection_cached = DUCKDB_CONNECTION_CACHE.share().contains_key(&database_id);
 
-    if !connection_cached {
+    let mut cache = DUCKDB_CONNECTION_CACHE.exclusive();
+    let mut conn_order = unsafe { DUCKDB_CONNECTION_LRU.exclusive() };
+
+    if cache.get(&database_id).is_some() {
+        // Since heapless::Deque does not have a method to retain elements that satisfy a predicate.
+        // Following implementation is O(n) but it is acceptable since MAX_CONNECTIONS is small.
+        let mut new_order: heapless::Deque<u32, 128> = heapless::Deque::new();
+
+        for &id in conn_order.iter() {
+            if id != database_id {
+                new_order.push_back(id).ok();
+            }
+        }
+
+        conn_order.clear();
+        for id in new_order.iter() {
+            conn_order.push_back(*id).ok();
+        }
+
+        let _ = conn_order.push_back(database_id);
+    } else {
+        if cache.len() >= MAX_CONNECTIONS {
+            if let Some(least_recently_used) = conn_order.pop_front() {
+                cache.remove(&least_recently_used);
+            }
+        }
+
         let conn = DuckdbConnection::default();
-        DUCKDB_CONNECTION_CACHE
-            .exclusive()
-            .insert(database_id, conn)
-            .expect("failed to cache connection");
+        let _ = cache.insert(database_id, conn);
+        let _ = conn_order.push_back(database_id);
     }
 
-    Ok(DUCKDB_CONNECTION_CACHE
-        .share()
+    Ok(cache
         .get(&database_id)
         .ok_or_else(|| anyhow!("connection not found"))?
         .0

@@ -19,7 +19,6 @@ pg_test = []
 
 [dependencies]
 anyhow = "1.0.83"
-arrow-buffer = "52.0.0"
 async-std = { version = "1.12.0", features = ["tokio1", "attributes"] }
 chrono = "0.4.34"
 duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = ["bundled", "extensions-full"], rev = "e532dd6" }
@@ -27,7 +26,6 @@ pgrx = "0.11.3"
 serde = "1.0.201"
 serde_json = "1.0.120"
 signal-hook = "0.3.17"
-signal-hook-async-std = "0.2.2"
 shared = { git = "https://github.com/paradedb/paradedb.git", rev = "4854652" }
 supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "6c58451" }
 thiserror = "1.0.59"
