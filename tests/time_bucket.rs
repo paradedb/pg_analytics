@@ -145,7 +145,7 @@ async fn test_time_bucket_years_duckdb(mut conn: PgConnection, tempdir: TempDir)
 
 #[rstest]
 async fn test_time_bucket_fallback(mut conn: PgConnection) -> Result<()> {
-    let error_message = "Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function.If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.";
+    let error_message = "Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.";
     let trips_table = NycTripsTable::setup();
     trips_table.execute(&mut conn);
 
