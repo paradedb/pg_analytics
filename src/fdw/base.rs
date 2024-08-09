@@ -238,6 +238,9 @@ pub fn register_duckdb_view(
             FdwHandler::Parquet => {
                 connection::create_parquet_view(table_name, schema_name, table_options)?;
             }
+            FdwHandler::Spatial => {
+                connection::create_spatial_view(table_name, schema_name, table_options)?;
+            }
             _ => {
                 bail!("got unexpected fdw_handler")
             }

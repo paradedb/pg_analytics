@@ -1,5 +1,0 @@
-comment = 'pg_analytics: Postgres for analytics, powered by DuckDB'
-default_version = '@CARGO_VERSION@'
-module_pathname = '$libdir/pg_analytics'
-relocatable = false
-superuser = false

@@ -207,6 +207,20 @@ fn duckdb_type_to_pg(column_name: &str, duckdb_type: &str) -> Result<String> {
         );
     }
 
+    if duckdb_type.starts_with("POINT_3D") {
+        bail!(
+            "Column '{}' has type POINT_3D, which is not supported",
+            column_name
+        );
+    }
+
+    if duckdb_type.starts_with("POINT_4D") {
+        bail!(
+            "Column '{}' has type POINT_4D, which is not supported",
+            column_name
+        );
+    }
+
     let mut postgres_type = duckdb_type
         .replace("TINYINT", "SMALLINT")
         .replace("UTINYINT", "SMALLINT")
@@ -221,6 +235,15 @@ fn duckdb_type_to_pg(column_name: &str, duckdb_type: &str) -> Result<String> {
         .replace("TIMESTAMP_MS", "TIMESTAMP")
         .replace("TIMESTAMP_NS", "TIMESTAMP")
         .replace("TIME WITH TIME ZONE", "TIME");
+
+    // DuckDB spatial types conversions
+    postgres_type = postgres_type
+        .replace("GEOMETRY", "TEXT")
+        .replace("WKB_BLOB", "TEXT")
+        .replace("POINT_2D", "POINT")
+        .replace("BOX_2D", "BOX")
+        .replace("POLYGON_2D", "PATH")
+        .replace("LINESTRING_2D", "LINE");
 
     if postgres_type.starts_with("STRUCT") {
         postgres_type = "JSONB".to_string();
