@@ -18,7 +18,6 @@
 use anyhow::{anyhow, Result};
 use duckdb::arrow::array::RecordBatch;
 use duckdb::{Connection, Params, Statement};
-use pgrx::warning;
 use signal_hook::consts::signal::*;
 use signal_hook::iterator::Signals;
 use std::cell::UnsafeCell;
