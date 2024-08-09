@@ -21,4 +21,5 @@ pub mod delta;
 pub mod iceberg;
 pub mod parquet;
 pub mod secret;
+pub mod spatial;
 pub mod utils;
