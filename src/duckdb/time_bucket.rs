@@ -17,7 +17,6 @@
 
 use pgrx::*;
 
-
 fn set_date(year: i32, month: u8, day: u8) -> Date {
     Date::from(
         Timestamp::new(year, month, day, 0, 0, 0f64)
