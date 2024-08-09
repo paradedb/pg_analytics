@@ -18,8 +18,12 @@
 mod fixtures;
 
 use std::fs::File;
+use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::{DateTime, Datelike, TimeZone, Utc};
+use datafusion::arrow::array::*;
+use datafusion::arrow::datatypes::DataType;
 use datafusion::parquet::arrow::ArrowWriter;
 use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
@@ -28,7 +32,7 @@ use rstest::*;
 use shared::fixtures::arrow::{
     delta_primitive_record_batch, primitive_record_batch, primitive_setup_fdw_local_file_delta,
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
-    primitive_setup_fdw_s3_listing,
+    primitive_setup_fdw_s3_listing, setup_fdw_local_parquet_file_listing, FieldSpec,
 };
 use shared::fixtures::tempfile::TempDir;
 use sqlx::postgres::types::PgInterval;
@@ -36,10 +40,47 @@ use sqlx::types::{BigDecimal, Json, Uuid};
 use sqlx::PgConnection;
 use std::collections::HashMap;
 use std::str::FromStr;
+use temporal_conversions::SECONDS_IN_DAY;
 use time::macros::{date, datetime, time};
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";
+
+fn date_time_record_batch() -> Result<(RecordBatch, FieldSpec, Vec<String>)> {
+    let field_spec = FieldSpec::from(vec![
+        ("date32_col", DataType::Date32, false, "date"),
+        ("date64_col", DataType::Date64, false, "date"),
+    ]);
+    let dates = vec![
+        "2023-04-01 21:10:00 +0000".to_string(),
+        "2023-04-01 22:08:00 +0000".to_string(),
+        "2023-04-02 04:55:00 +0000".to_string(),
+        "2023-04-02 11:45:00 +0000".to_string(),
+        "2023-04-03 01:20:00 +0000".to_string(),
+        "2023-04-03 12:30:00 +0000".to_string(),
+    ];
+    let (dates_i32, dates_i64): (Vec<_>, Vec<_>) = dates
+        .iter()
+        .map(|date_str| {
+            let dt = date_str.parse::<DateTime<Utc>>().unwrap();
+            (
+                (dt.timestamp() / SECONDS_IN_DAY) as i32,
+                dt.timestamp_millis(),
+            )
+        })
+        .unzip();
+
+    let schema = Arc::new(field_spec.arrow_schema());
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Date32Array::from(dates_i32)),
+            Arc::new(Date64Array::from(dates_i64)),
+        ],
+    )?;
+
+    Ok((batch, field_spec, dates))
+}
 
 #[rstest]
 async fn test_trip_count(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
@@ -283,6 +324,47 @@ async fn test_create_heap_from_parquet(mut conn: PgConnection, tempdir: TempDir)
 
     let count: (i64,) = "SELECT COUNT(*) FROM primitive_copy".fetch_one(&mut conn);
     assert_eq!(count.0, 3);
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_date_functions_support_with_local_file(
+    mut conn: PgConnection,
+    tempdir: TempDir,
+) -> Result<()> {
+    let (stored_batch, field_spec, dates) = date_time_record_batch()?;
+    let parquet_path = tempdir.path().join("test_date_functions.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    setup_fdw_local_parquet_file_listing(
+        parquet_path.as_path().to_str().unwrap(),
+        "dates",
+        &field_spec.postgres_schema(),
+    )
+    .execute(&mut conn);
+
+    let expected_rows: Vec<(f64, DateTime<Utc>)> = dates
+        .iter()
+        .map(|date_str| {
+            let dt = date_str.parse::<DateTime<Utc>>().unwrap();
+            (
+                dt.day() as f64,
+                Utc.with_ymd_and_hms(dt.year(), dt.month(), dt.day(), 0, 0, 0)
+                    .unwrap(),
+            )
+        })
+        .collect();
+
+    let fetched_rows =
+        "SELECT DATE_PART('day', date32_col), DATE_TRUNC('day', date64_col) FROM dates"
+            .fetch_result::<(f64, chrono::DateTime<Utc>)>(&mut conn)?;
+    assert_eq!(expected_rows.len(), fetched_rows.len());
+    assert_eq!(expected_rows, fetched_rows);
 
     Ok(())
 }
