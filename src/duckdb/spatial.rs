@@ -81,7 +81,7 @@ pub fn create_view(
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<String> {
-    if table_options.get(SpatialOption::Files.as_str()).is_none() {
+    if !table_options.contains_key(SpatialOption::Files.as_str()) {
         return Err(anyhow!("Files option is required"));
     }
 
