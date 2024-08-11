@@ -230,7 +230,6 @@ pub fn duckdb_conn() -> duckdb::Connection {
 
 #[allow(dead_code)]
 pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
-    // Define the fields for each datatype
     let fields = vec![
         Field::new("value", DataType::Int32, false),
         Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
@@ -254,7 +253,6 @@ pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
 
 #[allow(dead_code)]
 pub fn time_series_record_batch_years() -> Result<RecordBatch> {
-    // Define the fields for each datatype
     let fields = vec![
         Field::new("value", DataType::Int32, false),
         Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
