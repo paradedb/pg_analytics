@@ -24,9 +24,12 @@ use fixtures::*;
 use rstest::*;
 use shared::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use shared::fixtures::tempfile::TempDir;
+use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
 use std::fs::File;
+use std::str::FromStr;
 use time::Date;
+use time::Month::January;
 
 #[rstest]
 async fn test_time_bucket_minutes_duckdb(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
@@ -68,20 +71,51 @@ async fn test_time_bucket_minutes_duckdb(mut conn: PgConnection, tempdir: TempDi
         Err(_) => {}
     }
 
-    let data: Vec<(NaiveDateTime,)> = "SELECT time_bucket(INTERVAL '6 MINUTE', timestamp::TIMESTAMP) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+    let data: Vec<(NaiveDateTime, BigDecimal)> = "SELECT time_bucket(INTERVAL '10 MINUTE', timestamp::TIMESTAMP) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(2, data.len());
 
-    let data: Vec<(NaiveDateTime,)> = "SELECT time_bucket(INTERVAL '1 MINUTE', timestamp::TIMESTAMP) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+    let expected: Vec<(NaiveDateTime, BigDecimal)> = vec![
+        ("1970-01-01T00:00:00".parse()?, BigDecimal::from_str("3")?),
+        ("1970-01-01T00:10:00".parse()?, BigDecimal::from_str("8")?),
+    ];
+    assert_eq!(expected, data);
+
+    let data: Vec<(NaiveDateTime, BigDecimal)> = "SELECT time_bucket(INTERVAL '1 MINUTE', timestamp::TIMESTAMP) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(10, data.len());
 
-    let data: Vec<(NaiveDateTime,)> = "SELECT time_bucket(INTERVAL '10 MINUTE', timestamp::TIMESTAMP, INTERVAL '5 MINUTE') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
-        .fetch_result(&mut conn).unwrap();
+    let expected: Vec<(NaiveDateTime, BigDecimal)> = vec![
+        ("1970-01-01T00:01:00".parse()?, BigDecimal::from_str("1")?),
+        ("1970-01-01T00:02:00".parse()?, BigDecimal::from_str("-1")?),
+        ("1970-01-01T00:03:00".parse()?, BigDecimal::from_str("0")?),
+        ("1970-01-01T00:04:00".parse()?, BigDecimal::from_str("2")?),
+        ("1970-01-01T00:05:00".parse()?, BigDecimal::from_str("3")?),
+        ("1970-01-01T00:06:00".parse()?, BigDecimal::from_str("4")?),
+        ("1970-01-01T00:07:00".parse()?, BigDecimal::from_str("5")?),
+        ("1970-01-01T00:08:00".parse()?, BigDecimal::from_str("6")?),
+        ("1970-01-01T00:09:00".parse()?, BigDecimal::from_str("7")?),
+        ("1970-01-01T00:10:00".parse()?, BigDecimal::from_str("8")?),
+    ];
+    assert_eq!(expected, data);
 
-    println!("{:?}", data);
+    let data: Vec<(NaiveDateTime, BigDecimal)> = "SELECT time_bucket(INTERVAL '10 MINUTE', timestamp::TIMESTAMP, INTERVAL '5 MINUTE') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+        .fetch_result(&mut conn).unwrap();
+    assert_eq!(2, data.len());
+
+    let expected: Vec<(NaiveDateTime, BigDecimal)> = vec![
+        (
+            "1969-12-31T23:55:00".parse()?,
+            BigDecimal::from_str("0.5000")?,
+        ),
+        (
+            "1970-01-01T00:05:00".parse()?,
+            BigDecimal::from_str("5.5000")?,
+        ),
+    ];
+    assert_eq!(expected, data);
 
     Ok(())
 }
@@ -126,20 +160,105 @@ async fn test_time_bucket_years_duckdb(mut conn: PgConnection, tempdir: TempDir)
         Err(_) => {}
     }
 
-    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '1 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+    let data: Vec<(Date, BigDecimal)> = "SELECT time_bucket(INTERVAL '1 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(10, data.len());
 
-    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '5 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+    let expected: Vec<(Date, BigDecimal)> = vec![
+        (
+            Date::from_calendar_date(1970, January, 1)?,
+            BigDecimal::from_str("1")?,
+        ),
+        (
+            Date::from_calendar_date(1971, January, 1)?,
+            BigDecimal::from_str("-1")?,
+        ),
+        (
+            Date::from_calendar_date(1972, January, 1)?,
+            BigDecimal::from_str("0")?,
+        ),
+        (
+            Date::from_calendar_date(1973, January, 1)?,
+            BigDecimal::from_str("2")?,
+        ),
+        (
+            Date::from_calendar_date(1974, January, 1)?,
+            BigDecimal::from_str("3")?,
+        ),
+        (
+            Date::from_calendar_date(1975, January, 1)?,
+            BigDecimal::from_str("4")?,
+        ),
+        (
+            Date::from_calendar_date(1976, January, 1)?,
+            BigDecimal::from_str("5")?,
+        ),
+        (
+            Date::from_calendar_date(1977, January, 1)?,
+            BigDecimal::from_str("6")?,
+        ),
+        (
+            Date::from_calendar_date(1978, January, 1)?,
+            BigDecimal::from_str("7")?,
+        ),
+        (
+            Date::from_calendar_date(1979, January, 1)?,
+            BigDecimal::from_str("8")?,
+        ),
+    ];
+    assert_eq!(expected, data);
+
+    let data: Vec<(Date, BigDecimal)> = "SELECT time_bucket(INTERVAL '5 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
     assert_eq!(2, data.len());
 
-    let data: Vec<(Date,)> = "SELECT time_bucket(INTERVAL '2 YEAR', timestamp::DATE, DATE '1980-01-01') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
+    let expected: Vec<(Date, BigDecimal)> = vec![
+        (
+            Date::from_calendar_date(1970, January, 1)?,
+            BigDecimal::from_str("1")?,
+        ),
+        (
+            Date::from_calendar_date(1975, January, 1)?,
+            BigDecimal::from_str("6")?,
+        ),
+    ];
+    assert_eq!(expected, data);
+
+    let data: Vec<(Date, BigDecimal)> = "SELECT time_bucket(INTERVAL '2 YEAR', timestamp::DATE, DATE '1969-01-01') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
         .fetch_result(&mut conn).unwrap();
 
-    assert_eq!(5, data.len());
+    assert_eq!(6, data.len());
+
+    let expected: Vec<(Date, BigDecimal)> = vec![
+        (
+            Date::from_calendar_date(1969, January, 1)?,
+            BigDecimal::from_str("1")?,
+        ),
+        (
+            Date::from_calendar_date(1971, January, 1)?,
+            BigDecimal::from_str("-0.5000")?,
+        ),
+        (
+            Date::from_calendar_date(1973, January, 1)?,
+            BigDecimal::from_str("2.5000")?,
+        ),
+        (
+            Date::from_calendar_date(1975, January, 1)?,
+            BigDecimal::from_str("4.5000")?,
+        ),
+        (
+            Date::from_calendar_date(1977, January, 1)?,
+            BigDecimal::from_str("6.5000")?,
+        ),
+        (
+            Date::from_calendar_date(1979, January, 1)?,
+            BigDecimal::from_str("8")?,
+        ),
+    ];
+    assert_eq!(expected, data);
+
     Ok(())
 }
 
