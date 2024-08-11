@@ -13,9 +13,10 @@ on:
       - main
     paths:
       - ".github/workflows/test-pg_analytics.yml"
-      - "pg_analytics/**"
-      - "!pg_analytics/README.md"
-      - "shared/**"
+      - "src/**"
+      - "tests/**"
+      - "Cargo.toml"
+      - "pg_analytics.control"
   push:
     branches:
       - dev # Run CI on dev. This is important to fill the GitHub Actions cache in a way that pull requests can see it
