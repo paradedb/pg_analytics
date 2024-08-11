@@ -21,5 +21,4 @@ pub mod delta;
 pub mod iceberg;
 pub mod parquet;
 pub mod secret;
-pub mod time_bucket;
 pub mod utils;

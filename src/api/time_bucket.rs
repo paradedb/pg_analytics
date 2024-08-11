@@ -17,24 +17,26 @@
 
 use pgrx::*;
 
+const TIME_BUCKET_FALLBACK_ERROR: &'static str = "Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.";
+
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date(_bucket_width: Interval, _input: Date) -> Date {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_origin(_bucket_width: Interval, _input: Date, _origin: Date) -> Date {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_date_offset(_bucket_width: Interval, _input: Date, _offset: Interval) -> Date {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
 
 #[pg_extern(name = "time_bucket")]
 pub fn time_bucket_timestamp(_bucket_width: Interval, _input: Timestamp) -> Timestamp {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -43,7 +45,7 @@ pub fn time_bucket_timestamp_offset_date(
     _input: Timestamp,
     _origin: Date,
 ) -> Timestamp {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
 
 #[pg_extern(name = "time_bucket")]
@@ -52,5 +54,5 @@ pub fn time_bucket_timestamp_offset_interval(
     _input: Timestamp,
     _offset: Interval,
 ) -> Timestamp {
-    panic!("Function `time_bucket()` must be used with a DuckDB FDW. Native postgres does not support this function. If you believe this function should be implemented natively as a fallback please submit a ticket to https://github.com/paradedb/pg_analytics/issues.");
+    panic!("{}", TIME_BUCKET_FALLBACK_ERROR);
 }
