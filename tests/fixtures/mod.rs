@@ -228,7 +228,7 @@ pub fn duckdb_conn() -> duckdb::Connection {
     duckdb::Connection::open_in_memory().unwrap()
 }
 
-#[allow(dead_code)]
+#[fixture]
 pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
     let fields = vec![
         Field::new("value", DataType::Int32, false),
@@ -251,7 +251,7 @@ pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
     )?)
 }
 
-#[allow(dead_code)]
+#[fixture]
 pub fn time_series_record_batch_years() -> Result<RecordBatch> {
     let fields = vec![
         Field::new("value", DataType::Int32, false),
