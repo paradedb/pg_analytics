@@ -50,25 +50,15 @@ async fn test_time_bucket_minutes_duckdb(mut conn: PgConnection, tempdir: TempDi
     )
     .execute(&mut conn);
 
-    #[allow(clippy::single_match)]
-    match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
-        Ok(_) => {}
-        Err(error) => {
-            panic!(
-                "should have successfully called time_bucket() for timeseries data: {}",
-                error
-            );
-        }
-    }
-
-    #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {
             panic!(
                 "should have failed call to time_bucket() for timeseries data with incorrect parameters"
             );
         }
-        Err(_) => {}
+        Err(err) => {
+            assert_eq!("error returned from database: function time_bucket(interval) does not exist", err.to_string());
+        }
     }
 
     let data: Vec<(NaiveDateTime, BigDecimal)> = "SELECT time_bucket(INTERVAL '10 MINUTE', timestamp::TIMESTAMP) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
@@ -139,25 +129,15 @@ async fn test_time_bucket_years_duckdb(mut conn: PgConnection, tempdir: TempDir)
     )
     .execute(&mut conn);
 
-    #[allow(clippy::single_match)]
-    match "SELECT time_bucket(INTERVAL '2 DAY', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
-        Ok(_) => {}
-        Err(error) => {
-            panic!(
-                "should have successfully called time_bucket() for timeseries data: {}",
-                error
-            );
-        }
-    }
-
-    #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY') AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {
             panic!(
                 "should have failed call to time_bucket() for timeseries data with incorrect parameters"
             );
         }
-        Err(_) => {}
+        Err(err) => {
+            assert_eq!("error returned from database: function time_bucket(interval) does not exist", err.to_string());
+        }
     }
 
     let data: Vec<(Date, BigDecimal)> = "SELECT time_bucket(INTERVAL '1 YEAR', timestamp::DATE) AS bucket, AVG(value) as avg_value FROM timeseries GROUP BY bucket ORDER BY bucket;"
@@ -268,7 +248,6 @@ async fn test_time_bucket_fallback(mut conn: PgConnection) -> Result<()> {
     let trips_table = NycTripsTable::setup();
     trips_table.execute(&mut conn);
 
-    #[allow(clippy::single_match)]
     match "SELECT time_bucket(INTERVAL '2 DAY', tpep_pickup_datetime::DATE) AS bucket, AVG(trip_distance) as avg_value FROM nyc_trips GROUP BY bucket ORDER BY bucket;".execute_result(&mut conn) {
         Ok(_) => {
             panic!("Should have error'ed when calling time_bucket() on non-FDW data.")
