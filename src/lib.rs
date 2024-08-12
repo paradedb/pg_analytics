@@ -44,7 +44,8 @@ pub extern "C" fn _PG_init() {
 
     GUCS.init("pg_analytics");
 
-    setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
+    // TODO: Change to ParadeExtension::PgAnalytics
+    setup_telemetry_background_worker(ParadeExtension::PgLakehouse);
 }
 
 #[cfg(test)]
