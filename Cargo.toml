@@ -28,8 +28,8 @@ serde = "1.0.201"
 serde_json = "1.0.120"
 signal-hook = "0.3.17"
 signal-hook-async-std = "0.2.2"
-shared = { git = "https://github.com/paradedb/paradedb.git", rev = "4a07043" }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "6c58451" }
+shared = { git = "https://github.com/paradedb/paradedb.git", rev = "4854652" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "27af09b" }
 thiserror = "1.0.59"
 uuid = "1.9.1"
 
@@ -42,7 +42,7 @@ futures = "0.3.30"
 pgrx-tests = "0.11.3"
 rstest = "0.19.0"
 serde_arrow = { version = "0.11.3", features = ["arrow-51"] }
-shared = { git = "https://github.com/paradedb/paradedb.git", rev = "4a07043", features = ["fixtures"] }
+shared = { git = "https://github.com/paradedb/paradedb.git", rev = "4854652", features = ["fixtures"] }
 sqlx = { version = "0.7.4", features = [
   "postgres",
   "runtime-async-std",
