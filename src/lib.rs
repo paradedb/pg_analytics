@@ -44,7 +44,8 @@ pub extern "C" fn _PG_init() {
 
     GUCS.init("pg_analytics");
 
-    setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
+    // TODO: Reactivate once we've properly integrated with the monorepo
+    // setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
 }
 
 #[cfg(test)]
