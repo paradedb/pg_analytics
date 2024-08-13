@@ -25,7 +25,7 @@ use hooks::ExtensionHook;
 use pgrx::*;
 use shared::{
     gucs::PostgresGlobalGucSettings,
-    telemetry::{setup_telemetry_background_worker, ParadeExtension},
+    // telemetry::{setup_telemetry_background_worker, ParadeExtension},
 };
 
 // A static variable is required to host grand unified configuration settings.
