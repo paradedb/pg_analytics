@@ -18,6 +18,9 @@
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
+
+/// SpatialOption is an enum that represents the options that can be passed to the st_read function.
+/// Reference https://github.com/duckdb/duckdb_spatial/blob/main/docs/functions.md#st_read
 #[derive(PartialEq)]
 pub enum SpatialOption {
     Files,
