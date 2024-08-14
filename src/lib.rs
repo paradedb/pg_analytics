@@ -25,7 +25,7 @@ use hooks::ExtensionHook;
 use pgrx::*;
 use shared::{
     gucs::PostgresGlobalGucSettings,
-    telemetry::{setup_telemetry_background_worker, ParadeExtension},
+    // telemetry::{setup_telemetry_background_worker, ParadeExtension},
 };
 
 // A static variable is required to host grand unified configuration settings.
@@ -44,8 +44,8 @@ pub extern "C" fn _PG_init() {
 
     GUCS.init("pg_analytics");
 
-    // TODO: Change to ParadeExtension::PgAnalytics
-    setup_telemetry_background_worker(ParadeExtension::PgLakehouse);
+    // TODO: Reactivate once we've properly integrated with the monorepo
+    // setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
 }
 
 #[cfg(test)]
