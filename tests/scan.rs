@@ -47,7 +47,7 @@ use crate::fixtures::tables::nyc_trips::NycTripsTable;
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";
 
-fn json_string_record_batch() -> Result<(RecordBatch, FieldSpec)> {
+fn test_json_conversion_from_text() -> Result<(RecordBatch, FieldSpec)> {
     let field_spec = FieldSpec::from(vec![
         ("id_col", DataType::Int64, false, "bigint"),
         ("small_col", DataType::Utf8, false, "text"),
