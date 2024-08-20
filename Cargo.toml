@@ -61,7 +61,13 @@ testcontainers = "0.16.7"
 testcontainers-modules = { version = "0.4.2", features = ["localstack"] }
 time = { version = "0.3.34", features = ["serde"] }
 geojson = "0.24.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rand = { version = "0.8.5" }
+csv = { version = "1.2.2" }
+
 
 [[bin]]
 name = "pgrx_embed_pg_analytics"
 path = "src/bin/pgrx_embed.rs"
+
