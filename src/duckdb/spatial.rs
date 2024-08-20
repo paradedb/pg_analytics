@@ -28,6 +28,7 @@ use crate::fdw::base::OptionValidator;
 #[strum(serialize_all = "snake_case")]
 pub enum SpatialOption {
     Files,
+    Cache,
     SequentialLayerScan,
     SpatialFilter,
     OpenOptions,
@@ -42,6 +43,7 @@ impl OptionValidator for SpatialOption {
     fn is_required(&self) -> bool {
         match self {
             Self::Files => true,
+            Self::Cache => false,
             Self::SequentialLayerScan => false,
             Self::SpatialFilter => false,
             Self::OpenOptions => false,
@@ -54,7 +56,7 @@ impl OptionValidator for SpatialOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -73,8 +75,15 @@ pub fn create_view(
         })
         .collect::<Vec<String>>();
 
+    let cache = table_options
+        .get(SpatialOption::Cache.as_ref())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
     Ok(format!(
-        "CREATE VIEW IF NOT EXISTS {}.{} AS SELECT * FROM st_read({})",
+        "CREATE {relation} IF NOT EXISTS {}.{} AS SELECT * FROM st_read({})",
         schema_name,
         table_name,
         spatial_options.join(", "),
@@ -97,7 +106,7 @@ mod tests {
 
         let expected =
             "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM st_read('/data/spatial')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 

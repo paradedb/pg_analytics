@@ -27,6 +27,7 @@ use super::utils;
 #[strum(serialize_all = "snake_case")]
 pub enum ParquetOption {
     BinaryAsString,
+    Cache,
     FileName,
     FileRowNumber,
     Files,
@@ -43,6 +44,7 @@ impl OptionValidator for ParquetOption {
     fn is_required(&self) -> bool {
         match self {
             Self::BinaryAsString => false,
+            Self::Cache => false,
             Self::FileName => false,
             Self::FileRowNumber => false,
             Self::Files => true,
@@ -50,13 +52,13 @@ impl OptionValidator for ParquetOption {
             Self::HiveTypes => false,
             Self::HiveTypesAutocast => false,
             Self::PreserveCasing => false,
-            Self::Select => false,
             Self::UnionByName => false,
+            Self::Select => false,
         }
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -110,12 +112,14 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    let default_select = "*".to_string();
-    let select = table_options
-        .get(ParquetOption::Select.as_ref())
-        .unwrap_or(&default_select);
+    let cache = table_options
+        .get(ParquetOption::Cache.as_ref())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_parquet({create_parquet_str})"))
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
 }
 
 #[cfg(test)]
@@ -124,14 +128,14 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_parquet_view_single_file() {
+    fn test_create_parquet_relation_single_file() {
         let table_name = "test";
         let schema_name = "main";
         let files = "/data/file.parquet";
         let table_options =
             HashMap::from([(ParquetOption::Files.as_ref().to_string(), files.to_string())]);
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet('/data/file.parquet')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -143,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_parquet_view_multiple_files() {
+    fn test_create_parquet_relation_multiple_files() {
         let table_name = "test";
         let schema_name = "main";
         let files = "/data/file1.parquet, /data/file2.parquet";
@@ -151,7 +155,7 @@ mod tests {
             HashMap::from([(ParquetOption::Files.as_ref().to_string(), files.to_string())]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet(['/data/file1.parquet', '/data/file2.parquet'])";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -163,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_parquet_view_with_options() {
+    fn test_create_parquet_relation_with_options() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([
@@ -202,7 +206,7 @@ mod tests {
         ]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet('/data/file.parquet', binary_as_string = true, filename = false, file_row_number = true, hive_partitioning = true, hive_types = {'release': DATE, 'orders': BIGINT}, hive_types_autocast = true, union_by_name = true)";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 

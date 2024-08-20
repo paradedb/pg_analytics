@@ -27,6 +27,7 @@ pub enum IcebergOption {
     AllowMovedPaths,
     MetadataCompressionCodec,
     SkipSchemaInference,
+    Cache,
     Files,
     PreserveCasing,
     Select,
@@ -38,6 +39,7 @@ impl OptionValidator for IcebergOption {
             Self::AllowMovedPaths => false,
             Self::MetadataCompressionCodec => false,
             Self::SkipSchemaInference => false,
+            Self::Cache => false,
             Self::Files => true,
             Self::PreserveCasing => false,
             Self::Select => false,
@@ -45,7 +47,7 @@ impl OptionValidator for IcebergOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -80,12 +82,14 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    let default_select = "*".to_string();
-    let select = table_options
-        .get(IcebergOption::Select.as_ref())
-        .unwrap_or(&default_select);
+    let cache = table_options
+        .get(IcebergOption::Cache.as_ref())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM iceberg_scan({create_iceberg_str})"))
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM iceberg_scan({create_iceberg_str})"))
 }
 
 #[cfg(test)]
@@ -94,7 +98,7 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_iceberg_view() {
+    fn test_create_iceberg_relation() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
@@ -104,7 +108,7 @@ mod tests {
 
         let expected =
             "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM iceberg_scan('/data/iceberg')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 

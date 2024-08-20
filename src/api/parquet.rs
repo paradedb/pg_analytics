@@ -15,11 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use pgrx::*;
 
-use crate::duckdb::connection;
 use crate::duckdb::utils;
+use crate::env::get_global_connection;
+use crate::with_connection;
+use duckdb::Connection;
 
 type ParquetSchemaRow = (
     Option<String>,
@@ -87,49 +89,51 @@ pub fn parquet_schema(
 
 #[inline]
 fn parquet_schema_impl(files: &str) -> Result<Vec<ParquetSchemaRow>> {
-    let schema_str = utils::format_csv(files);
-    let conn = unsafe { &*connection::get_global_connection().get() };
-    let query = format!("SELECT * FROM parquet_schema({schema_str})");
-    let mut stmt = conn.prepare(&query)?;
+    with_connection!(|conn: &Connection| {
+        let schema_str = utils::format_csv(files);
+        let query = format!("SELECT * FROM parquet_schema({schema_str})");
+        let mut stmt = conn.prepare(&query)?;
 
-    Ok(stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, Option<String>>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, Option<String>>(3)?,
-                row.get::<_, Option<String>>(4)?,
-                row.get::<_, Option<i64>>(5)?,
-                row.get::<_, Option<String>>(6)?,
-                row.get::<_, Option<i64>>(7)?,
-                row.get::<_, Option<i64>>(8)?,
-                row.get::<_, Option<i64>>(9)?,
-                row.get::<_, Option<String>>(10)?,
-            ))
-        })?
-        .map(|row| row.unwrap())
-        .collect::<Vec<ParquetSchemaRow>>())
+        Ok(stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<i64>>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<i64>>(7)?,
+                    row.get::<_, Option<i64>>(8)?,
+                    row.get::<_, Option<i64>>(9)?,
+                    row.get::<_, Option<String>>(10)?,
+                ))
+            })?
+            .map(|row| row.unwrap())
+            .collect::<Vec<ParquetSchemaRow>>())
+    })
 }
 
 #[inline]
 fn parquet_describe_impl(files: &str) -> Result<Vec<ParquetDescribeRow>> {
-    let schema_str = utils::format_csv(files);
-    let conn = unsafe { &*connection::get_global_connection().get() };
-    let query = format!("DESCRIBE SELECT * FROM {schema_str}");
-    let mut stmt = conn.prepare(&query)?;
+    with_connection!(|conn: &Connection| {
+        let schema_str = utils::format_csv(files);
+        let query = format!("DESCRIBE SELECT * FROM {schema_str}");
+        let mut stmt = conn.prepare(&query)?;
 
-    Ok(stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, Option<String>>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, Option<String>>(3)?,
-                row.get::<_, Option<String>>(4)?,
-                row.get::<_, Option<String>>(5)?,
-            ))
-        })?
-        .map(|row| row.unwrap())
-        .collect::<Vec<ParquetDescribeRow>>())
+        Ok(stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
+                ))
+            })?
+            .map(|row| row.unwrap())
+            .collect::<Vec<ParquetDescribeRow>>())
+    })
 }

@@ -15,14 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use pgrx::*;
+use std::collections::HashMap;
 use std::ffi::CStr;
 use supabase_wrappers::prelude::{options_to_hashmap, user_mapping_options};
 
-use super::base::register_duckdb_view;
 use crate::duckdb::connection;
+use crate::env::get_global_connection;
 use crate::fdw::handler::FdwHandler;
+use crate::with_connection;
+use duckdb::Connection;
 
 extension_sql!(
     r#"
@@ -118,24 +121,20 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
         );
     }
 
-    // Drop stale view
-    connection::execute(
-        format!("DROP VIEW IF EXISTS {schema_name}.{table_name}").as_str(),
-        [],
-    )?;
+    // Drop stale relation
+    connection::drop_relation(table_name, schema_name)?;
 
-    // Register DuckDB view
+    // Create DuckDB secrets
     let foreign_server = unsafe { pg_sys::GetForeignServer((*foreign_table).serverid) };
     let user_mapping_options = unsafe { user_mapping_options(foreign_server) };
+    if !user_mapping_options.is_empty() {
+        connection::create_secret(user_mapping_options)?;
+    }
+
+    // Create DuckDB relation
     let table_options = unsafe { options_to_hashmap((*foreign_table).options)? };
     let handler = FdwHandler::from(foreign_table);
-    register_duckdb_view(
-        table_name,
-        schema_name,
-        table_options.clone(),
-        user_mapping_options,
-        handler,
-    )?;
+    create_duckdb_relation(table_name, schema_name, table_options.clone(), handler)?;
 
     // If the table already has columns, no need for auto schema creation
     let relation = pg_sys::relation_open(oid, pg_sys::AccessShareLock as i32);
@@ -147,30 +146,31 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     pg_sys::RelationClose(relation);
 
     // Get DuckDB schema
-    let conn = unsafe { &*connection::get_global_connection().get() };
-    let query = format!("DESCRIBE {schema_name}.{table_name}");
-    let mut stmt = conn.prepare(&query)?;
+    with_connection!(|conn: &Connection| {
+        let query = format!("DESCRIBE {schema_name}.{table_name}");
+        let mut stmt = conn.prepare(&query)?;
 
-    let schema_rows = stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })?
-        .map(|row| row.unwrap())
-        .collect::<Vec<(String, String)>>();
+        let schema_rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
+            .map(|row| row.unwrap())
+            .collect::<Vec<(String, String)>>();
 
-    if schema_rows.is_empty() {
-        return Ok(());
-    }
+        if schema_rows.is_empty() {
+            return Ok(());
+        }
 
-    // Alter Postgres table to match DuckDB schema
-    let preserve_casing = table_options
-        .get("preserve_casing")
-        .map_or(false, |s| s.eq_ignore_ascii_case("true"));
-    let alter_table_statement =
-        construct_alter_table_statement(schema_name, table_name, schema_rows, preserve_casing);
-    Spi::run(alter_table_statement.as_str())?;
+        // Alter Postgres table to match DuckDB schema
+        let preserve_casing = table_options
+            .get("preserve_casing")
+            .map_or(false, |s| s.eq_ignore_ascii_case("true"));
+        let alter_table_statement =
+            construct_alter_table_statement(schema_name, table_name, schema_rows, preserve_casing);
+        Spi::run(alter_table_statement.as_str())?;
 
-    Ok(())
+        Ok(())
+    })
 }
 
 #[inline]
@@ -273,4 +273,43 @@ fn construct_alter_table_statement(
         spi::quote_identifier(table_name),
         column_definitions.join(", ")
     )
+}
+
+#[inline]
+pub fn create_duckdb_relation(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+    handler: FdwHandler,
+) -> Result<()> {
+    connection::execute(
+        format!("CREATE SCHEMA IF NOT EXISTS {schema_name}").as_str(),
+        [],
+    )?;
+
+    match handler {
+        FdwHandler::Csv => {
+            connection::create_csv_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Delta => {
+            connection::create_delta_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Iceberg => {
+            connection::create_iceberg_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Parquet => {
+            connection::create_parquet_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Spatial => {
+            connection::create_spatial_relation(table_name, schema_name, table_options)?;
+        }
+        FdwHandler::Json => {
+            connection::create_json_relation(table_name, schema_name, table_options)?;
+        }
+        _ => {
+            bail!("got unexpected fdw_handler")
+        }
+    };
+
+    Ok(())
 }

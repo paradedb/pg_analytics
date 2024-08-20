@@ -23,6 +23,7 @@ use strum::{AsRefStr, EnumIter};
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum DeltaOption {
+    Cache,
     Files,
     PreserveCasing,
     Select,
@@ -31,6 +32,7 @@ pub enum DeltaOption {
 impl OptionValidator for DeltaOption {
     fn is_required(&self) -> bool {
         match self {
+            Self::Cache => false,
             Self::Files => true,
             Self::PreserveCasing => false,
             Self::Select => false,
@@ -38,7 +40,7 @@ impl OptionValidator for DeltaOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -50,13 +52,15 @@ pub fn create_view(
             .ok_or_else(|| anyhow!("files option is required"))?
     );
 
-    let default_select = "*".to_string();
-    let select = table_options
-        .get(DeltaOption::Select.as_ref())
-        .unwrap_or(&default_select);
+    let cache = table_options
+        .get(DeltaOption::Cache.as_ref())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
+    let relation = if cache { "TABLE" } else { "VIEW" };
 
     Ok(format!(
-        "CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM delta_scan({files})"
+        "CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM delta_scan({files})"
     ))
 }
 
@@ -66,7 +70,7 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_delta_view() {
+    fn test_create_delta_relation() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
@@ -76,7 +80,7 @@ mod tests {
 
         let expected =
             "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM delta_scan('/data/delta')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
