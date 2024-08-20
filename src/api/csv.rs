@@ -15,12 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use duckdb::types::Value;
 use pgrx::*;
 
-use crate::duckdb::connection;
 use crate::duckdb::utils;
+use crate::env::get_global_connection;
+use crate::with_connection;
+use duckdb::Connection;
 
 type SniffCsvRow = (
     Option<String>,
@@ -62,34 +64,36 @@ pub fn sniff_csv(
 
 #[inline]
 fn sniff_csv_impl(files: &str, sample_size: Option<i64>) -> Result<Vec<SniffCsvRow>> {
-    let schema_str = vec![
-        Some(utils::format_csv(files)),
-        sample_size.map(|s| s.to_string()),
-    ]
-    .into_iter()
-    .flatten()
-    .collect::<Vec<String>>()
-    .join(", ");
-    let conn = unsafe { &*connection::get_global_connection().get() };
-    let query = format!("SELECT * FROM sniff_csv({schema_str})");
-    let mut stmt = conn.prepare(&query)?;
+    with_connection!(|conn: &Connection| {
+        let schema_str = vec![
+            Some(utils::format_csv(files)),
+            sample_size.map(|s| s.to_string()),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<String>>()
+        .join(", ");
 
-    Ok(stmt
-        .query_map([], |row| {
-            Ok((
-                row.get::<_, Option<String>>(0)?,
-                row.get::<_, Option<String>>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, Option<String>>(3)?,
-                row.get::<_, Option<i32>>(4)?,
-                row.get::<_, Option<bool>>(5)?,
-                row.get::<_, Option<Value>>(6)?.map(|v| format!("{:?}", v)),
-                row.get::<_, Option<String>>(7)?,
-                row.get::<_, Option<String>>(8)?,
-                row.get::<_, Option<String>>(9)?,
-                row.get::<_, Option<String>>(10)?,
-            ))
-        })?
-        .map(|row| row.unwrap())
-        .collect::<Vec<SniffCsvRow>>())
+        let query = format!("SELECT * FROM sniff_csv({schema_str})");
+        let mut stmt = conn.prepare(&query)?;
+
+        Ok(stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<i32>>(4)?,
+                    row.get::<_, Option<bool>>(5)?,
+                    row.get::<_, Option<Value>>(6)?.map(|v| format!("{:?}", v)),
+                    row.get::<_, Option<String>>(7)?,
+                    row.get::<_, Option<String>>(8)?,
+                    row.get::<_, Option<String>>(9)?,
+                    row.get::<_, Option<String>>(10)?,
+                ))
+            })?
+            .map(|row| row.unwrap())
+            .collect::<Vec<SniffCsvRow>>())
+    })
 }

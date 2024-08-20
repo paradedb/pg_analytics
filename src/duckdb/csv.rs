@@ -33,6 +33,8 @@ pub enum CsvOption {
     AutoDetect,
     #[strum(serialize = "auto_type_candidates")]
     AutoTypeCandidates,
+    #[strum(serialize = "cache")]
+    Cache,
     #[strum(serialize = "columns")]
     Columns,
     #[strum(serialize = "compression")]
@@ -102,6 +104,7 @@ impl OptionValidator for CsvOption {
             Self::AllowQuotedNulls => false,
             Self::AutoDetect => false,
             Self::AutoTypeCandidates => false,
+            Self::Cache => false,
             Self::Columns => false,
             Self::Compression => false,
             Self::Dateformat => false,
@@ -136,7 +139,7 @@ impl OptionValidator for CsvOption {
     }
 }
 
-pub fn create_view(
+pub fn create_duckdb_relation(
     table_name: &str,
     schema_name: &str,
     table_options: HashMap<String, String>,
@@ -310,12 +313,14 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    let default_select = "*".to_string();
-    let select = table_options
-        .get(CsvOption::Select.as_ref())
-        .unwrap_or(&default_select);
+    let cache = table_options
+        .get(CsvOption::Cache.as_ref())
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_csv({create_csv_str})"))
+    let relation = if cache { "TABLE" } else { "VIEW" };
+
+    Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_csv({create_csv_str})"))
 }
 
 #[cfg(test)]
@@ -324,7 +329,7 @@ mod tests {
     use duckdb::Connection;
 
     #[test]
-    fn test_create_csv_view_single_file() {
+    fn test_create_csv_relation_single_file() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
@@ -333,7 +338,7 @@ mod tests {
         )]);
         let expected =
             "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_csv('/data/file.csv')";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -345,7 +350,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_csv_view_multiple_files() {
+    fn test_create_csv_relation_multiple_files() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
@@ -354,7 +359,7 @@ mod tests {
         )]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_csv(['/data/file1.csv', '/data/file2.csv'])";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 
@@ -366,7 +371,7 @@ mod tests {
     }
 
     #[test]
-    fn test_create_csv_view_with_options() {
+    fn test_create_csv_relation_with_options() {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([
@@ -474,7 +479,7 @@ mod tests {
         ]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_csv('/data/file.csv', all_varchar = true, allow_quoted_nulls = true, auto_detect = true, auto_type_candidates = ['BIGINT', 'DATE'], columns = {'col1': 'INTEGER', 'col2': 'VARCHAR'}, compression = 'gzip', dateformat = '%d/%m/%Y', decimal_separator = '.', delim = ',', escape = '\"', filename = true, force_not_null = ['col1', 'col2'], header = true, hive_partitioning = true, hive_types = true, hive_types_autocast = true, ignore_errors = true, max_line_size = 1000, names = ['col1', 'col2'], new_line = '\n', normalize_names = true, null_padding = true, nullstr = ['none', 'null'], parallel = true, quote = '\"', sample_size = 100, sep = ',', skip = 0, timestampformat = 'yyyy-MM-dd HH:mm:ss', types = ['BIGINT', 'VARCHAR'], union_by_name = true)";
-        let actual = create_view(table_name, schema_name, table_options).unwrap();
+        let actual = create_duckdb_relation(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
 

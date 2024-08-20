@@ -17,6 +17,7 @@
 
 pub mod arrow;
 pub mod db;
+pub mod print_utils;
 pub mod tables;
 
 use anyhow::{Context, Result};
@@ -25,7 +26,7 @@ use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use bytes::Bytes;
 use chrono::{DateTime, Duration};
-use datafusion::arrow::array::{Int32Array, TimestampMillisecondArray};
+use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::TimeUnit::Millisecond;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::{
@@ -44,23 +45,26 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
 };
+use testcontainers::runners::AsyncRunner;
 use testcontainers::ContainerAsync;
-use testcontainers_modules::{
-    localstack::LocalStack,
-    testcontainers::{runners::AsyncRunner, RunnableImage},
-};
+use testcontainers_modules::{localstack::LocalStack, testcontainers::ImageExt};
 
 use crate::fixtures::db::*;
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use tokio::runtime::Runtime;
 
 #[fixture]
 pub fn database() -> Db {
-    block_on(async { Db::new().await })
+    block_on(async {
+        tracing::info!("Kom-0.1 conn !!!");
+        Db::new().await
+    })
 }
 
 #[fixture]
 pub fn conn(database: Db) -> PgConnection {
     block_on(async {
+        tracing::info!("Kom-0.2 conn !!!");
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")
             .execute(&mut conn)
@@ -94,13 +98,18 @@ pub struct S3 {
 }
 
 impl S3 {
-    async fn new() -> Self {
-        let image: RunnableImage<LocalStack> =
-            RunnableImage::from(LocalStack).with_env_var(("SERVICES", "s3"));
-        let container = image.start().await;
+    pub async fn new() -> Self {
+        let request = LocalStack::default().with_env_var("SERVICES", "s3");
+        let container = request
+            .start()
+            .await
+            .expect("failed to start the container");
 
-        let host_ip = container.get_host().await;
-        let host_port = container.get_host_port_ipv4(4566).await;
+        let host_ip = container.get_host().await.expect("failed to get Host IP");
+        let host_port = container
+            .get_host_port_ipv4(4566)
+            .await
+            .expect("failed to get Host Port");
         let url = format!("{host_ip}:{host_port}");
         let creds = aws_sdk_s3::config::Credentials::new("fake", "fake", None, None, "test");
 
@@ -239,6 +248,20 @@ impl S3 {
         )
         .await?;
         Ok(())
+    }
+}
+
+impl Drop for S3 {
+    fn drop(&mut self) {
+        tracing::warn!("S3 resource drop initiated");
+
+        let runtime = Runtime::new().expect("Failed to create Tokio runtime");
+        runtime.block_on(async {
+            self.container
+                .stop()
+                .await
+                .expect("Failed to stop container");
+        });
     }
 }
 

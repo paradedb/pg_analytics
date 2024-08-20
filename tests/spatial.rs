@@ -49,7 +49,7 @@ async fn test_arrow_types_local_file_spatial(
         foreign_members: None,
     });
     let geojson_string = geojson.to_string();
-    std::fs::write(&temp_path, &geojson_string)?;
+    std::fs::write(&temp_path, geojson_string)?;
 
     let field = Field::new("geom", DataType::Binary, false);
     let schema = Arc::new(Schema::new(vec![field]));
