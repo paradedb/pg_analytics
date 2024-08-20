@@ -15,42 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 use anyhow::Result;
-use datafusion::prelude::*;
 use prettytable::{format, Cell, Row, Table};
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 pub trait Printable: Debug {
     fn to_row(&self) -> Vec<String>;
 }
-
-macro_rules! impl_printable_for_tuple {
-    ($($T:ident),+) => {
-        impl<$($T),+> Printable for ($($T,)+)
-        where
-            $($T: Debug + Display,)+
-        {
-            #[allow(non_snake_case)]
-            fn to_row(&self) -> Vec<String> {
-                let ($($T,)+) = self;
-                vec![$($T.to_string(),)+]
-            }
-        }
-    }
-}
-
-// Implement Printable for tuples up to 12 elements
-impl_printable_for_tuple!(T1);
-impl_printable_for_tuple!(T1, T2);
-impl_printable_for_tuple!(T1, T2, T3);
-// impl_printable_for_tuple!(T1, T2, T3, T4);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11);
-impl_printable_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12);
 
 // Special implementation for (i32, i32, i64, Vec<i64>)
 impl Printable for (i32, i32, i64, Vec<i64>) {
@@ -72,6 +42,18 @@ impl Printable for (i32, i32, i64, f64) {
             self.2.to_string(),
             self.3.to_string(),
         ]
+    }
+}
+
+impl Printable for (String, f64) {
+    fn to_row(&self) -> Vec<String> {
+        vec![self.0.to_string(), self.1.to_string()]
+    }
+}
+
+impl Printable for (i32, String, f64) {
+    fn to_row(&self) -> Vec<String> {
+        vec![self.0.to_string(), self.1.to_string(), self.2.to_string()]
     }
 }
 

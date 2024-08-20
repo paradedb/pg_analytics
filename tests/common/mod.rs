@@ -17,13 +17,27 @@
 
 use anyhow::Result;
 use sqlx::PgConnection;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tracing_subscriber::{fmt, EnvFilter};
 
-pub mod duckdb_utils;
 pub mod print_utils;
 
+// Define a static atomic boolean for init_done
+static INIT_DONE: AtomicBool = AtomicBool::new(false);
+
 pub fn init_tracer() {
+    // Use compare_exchange to ensure thread-safety
+    if INIT_DONE
+        .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+        .is_err()
+    {
+        // Another thread has already initialized the tracer
+        return;
+    }
+
+    // Initialize the tracer
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("debug"));
+
     fmt()
         .with_env_filter(filter)
         .with_test_writer()

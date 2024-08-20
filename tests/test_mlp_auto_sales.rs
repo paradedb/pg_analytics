@@ -16,7 +16,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 mod common;
-mod datasets;
 mod fixtures;
 
 use std::env;
@@ -27,15 +26,11 @@ use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::common::{execute_query, fetch_results, init_tracer};
-use crate::datasets::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
+use crate::common::init_tracer;
 use crate::fixtures::*;
-use datafusion::arrow::array::*;
-use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit};
-use datafusion::arrow::record_batch::RecordBatch;
+use crate::tables::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
 use datafusion::datasource::file_format::options::ParquetReadOptions;
-use datafusion::logical_expr::col;
-use datafusion::prelude::{CsvReadOptions, SessionContext};
+use datafusion::prelude::SessionContext;
 
 #[fixture]
 fn parquet_path() -> PathBuf {
@@ -59,31 +54,22 @@ async fn test_partitioned_automotive_sales_s3_parquet(
     mut conn: PgConnection,
     parquet_path: PathBuf,
 ) -> Result<()> {
+    // Initialize tracing for logging and monitoring.
     init_tracer();
 
+    // Log the start of the test.
     tracing::error!("test_partitioned_automotive_sales_s3_parquet Started !!!");
 
-    tracing::error!("Kom-1.1 !!!");
-
-    // Check for the existence of a parquet file in a predefined path. If absent, generate it.
+    // Check if the Parquet file already exists at the specified path.
     if !parquet_path.exists() {
-        // Generate and save data
-        let sales_data = AutoSalesSimulator::generate_data(10000)?;
-
-        AutoSalesSimulator::save_to_parquet(&sales_data, &parquet_path)
+        // If the file doesn't exist, generate and save sales data in batches.
+        AutoSalesSimulator::save_to_parquet_in_batches(10000, 1000, &parquet_path)
             .map_err(|e| anyhow::anyhow!("Failed to save parquet: {}", e))?;
     }
 
-    tracing::error!("Kom-2.1 !!!");
-
-    // Set up S3
-    let s3 = s3.await;
-    let s3_bucket = "demo-mlp-auto-sales";
-    s3.create_bucket(s3_bucket).await?;
-
-    tracing::error!("Kom-3.1 !!!");
-
+    // Create a new DataFusion session context for querying the data.
     let ctx = SessionContext::new();
+    // Load the sales data from the Parquet file into a DataFrame.
     let df_sales_data = ctx
         .read_parquet(
             parquet_path.to_str().unwrap(),
@@ -91,47 +77,28 @@ async fn test_partitioned_automotive_sales_s3_parquet(
         )
         .await?;
 
-    tracing::error!(
-        "DataFrame schema after reading Parquet: {:?}",
-        df_sales_data.schema()
-    );
+    // Await the S3 service setup.
+    let s3 = s3.await;
+    // Define the S3 bucket name for storing sales data.
+    let s3_bucket = "demo-mlp-auto-sales";
+    // Create the S3 bucket if it doesn't already exist.
+    s3.create_bucket(s3_bucket).await?;
 
-    tracing::error!(
-        "Column names after reading Parquet: {:?}",
-        df_sales_data.schema().field_names()
-    );
+    // Partition the data and upload the partitions to the S3 bucket.
+    AutoSalesTestRunner::create_partition_and_upload_to_s3(&s3, s3_bucket, &df_sales_data).await?;
 
-    tracing::error!("Kom-4.1 !!!");
-
-    // Create partition and upload data to S3
-    // AutoSalesTestRunner::create_partition_and_upload_to_s3(&s3, s3_bucket, &df_sales_data).await?;
-
-    // AutoSalesTestRunner::investigate_datafusion_discrepancy(&df_sales_data, &parquet_path).await?;
-
-    AutoSalesTestRunner::create_partition_and_upload_to_s3(
-        &s3,
-        s3_bucket,
-        &df_sales_data,
-        &parquet_path,
-    )
-    .await?;
-
-    tracing::error!("Kom-5.1 !!!");
-
-    // Set up tables
+    // Set up the necessary tables in the PostgreSQL database using the data from S3.
     AutoSalesTestRunner::setup_tables(&mut conn, &s3, s3_bucket).await?;
 
-    tracing::error!("Kom-6.1 !!!");
+    // Assert that the total sales calculation matches the expected result.
+    AutoSalesTestRunner::assert_total_sales(&mut conn, &df_sales_data).await?;
 
-    // AutoSalesTestRunner::assert_total_sales(&mut conn, &ctx, &df_sales_data).await?;
+    // Assert that the average price calculation matches the expected result.
+    AutoSalesTestRunner::assert_avg_price(&mut conn, &df_sales_data).await?;
 
-    // AutoSalesTestRunner::assert_avg_price(&mut conn, &df_sales_data).await?;
+    // Assert that the monthly sales calculation matches the expected result.
+    AutoSalesTestRunner::assert_monthly_sales(&mut conn, &df_sales_data).await?;
 
-    // AutoSalesTestRunner::assert_monthly_sales(&mut conn, &df_sales_data).await?;
-
-    AutoSalesTestRunner::assert_monthly_sales_duckdb(&mut conn, &parquet_path).await?;
-
-    AutoSalesTestRunner::debug_april_sales(&mut conn, &parquet_path).await?;
-
+    // Return Ok if all assertions pass successfully.
     Ok(())
 }

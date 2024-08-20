@@ -65,9 +65,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rand = { version = "0.8.5" }
 csv = { version = "1.2.2" }
-
+approx = "0.5.1"
 
 [[bin]]
 name = "pgrx_embed_pg_analytics"
 path = "src/bin/pgrx_embed.rs"
-
