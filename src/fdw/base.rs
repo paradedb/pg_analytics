@@ -99,7 +99,7 @@ pub trait BaseFdw {
                 .iter()
                 .map(|x| x.deparse_with_fmt(&mut formatter))
                 .collect::<Vec<String>>()
-                .join(" and ");
+                .join(" AND ");
             sql.push_str(&format!(" WHERE {}", where_clauses));
         }
 
