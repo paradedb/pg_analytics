@@ -19,16 +19,26 @@ pub mod arrow;
 pub mod db;
 pub mod tables;
 
-use anyhow::Result;
+use std::{
+    fs::{self, File},
+    io::Cursor,
+    io::Read,
+    path::{Path, PathBuf},
+};
+
+use anyhow::{ Result, Context };
 use async_std::task::block_on;
 use aws_config::{BehaviorVersion, Region};
 use aws_sdk_s3::primitives::ByteStream;
+use bytes::Bytes;
 use chrono::{DateTime, Duration};
 use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::TimeUnit::Millisecond;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::{
+    arrow::datatypes::SchemaRef,
     arrow::{datatypes::FieldRef, record_batch::RecordBatch},
+    parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder,
     parquet::arrow::ArrowWriter,
 };
 use futures::future::{BoxFuture, FutureExt};
@@ -36,12 +46,6 @@ use rstest::*;
 use serde::Serialize;
 use serde_arrow::schema::{SchemaLike, TracingOptions};
 use sqlx::PgConnection;
-use std::sync::Arc;
-use std::{
-    fs::{self, File},
-    io::Read,
-    path::{Path, PathBuf},
-};
 use testcontainers::ContainerAsync;
 use testcontainers_modules::{
     localstack::LocalStack,
@@ -53,12 +57,16 @@ use crate::fixtures::tables::nyc_trips::NycTripsTable;
 
 #[fixture]
 pub fn database() -> Db {
-    block_on(async { Db::new().await })
+    block_on(async {
+        tracing::info!("Kom-0.1 conn !!!");
+        Db::new().await
+    })
 }
 
 #[fixture]
 pub fn conn(database: Db) -> PgConnection {
     block_on(async {
+        tracing::info!("Kom-0.2 conn !!!");
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")
             .execute(&mut conn)
@@ -142,6 +150,38 @@ impl S3 {
     }
 
     #[allow(unused)]
+    pub async fn get_batch(&self, bucket: &str, key: &str) -> Result<RecordBatch> {
+        // Retrieve the object from S3
+        let get_object_output = self
+            .client
+            .get_object()
+            .bucket(bucket)
+            .key(key)
+            .send()
+            .await
+            .context("Failed to get object from S3")?;
+
+        // Read the body of the object
+        let body = get_object_output.body.collect().await?;
+        let bytes: Bytes = body.into_bytes();
+
+        // Create a Parquet reader
+        let builder = ParquetRecordBatchReaderBuilder::try_new(bytes)
+            .context("Failed to create Parquet reader builder")?;
+
+        // Create the reader
+        let mut reader = builder.build().context("Failed to build Parquet reader")?;
+
+        // Read the first batch
+        let record_batch = reader
+            .next()
+            .context("No batches found in Parquet file")?
+            .context("Failed to read batch")?;
+
+        Ok(record_batch)
+    }    
+
+    #[allow(unused)]
     pub async fn put_rows<T: Serialize>(&self, bucket: &str, key: &str, rows: &[T]) -> Result<()> {
         let fields = Vec::<FieldRef>::from_type::<NycTripsTable>(TracingOptions::default())?;
         let batch = serde_arrow::to_record_batch(&fields, &rows)?;
@@ -221,50 +261,4 @@ pub fn tempdir() -> tempfile::TempDir {
 #[fixture]
 pub fn duckdb_conn() -> duckdb::Connection {
     duckdb::Connection::open_in_memory().unwrap()
-}
-
-#[fixture]
-pub fn time_series_record_batch_minutes() -> Result<RecordBatch> {
-    let fields = vec![
-        Field::new("value", DataType::Int32, false),
-        Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
-    ];
-
-    let schema = Arc::new(Schema::new(fields));
-
-    let start_time = DateTime::from_timestamp(60, 0).unwrap();
-    let timestamps: Vec<i64> = (0..10)
-        .map(|i| (start_time + Duration::minutes(i)).timestamp_millis())
-        .collect();
-
-    Ok(RecordBatch::try_new(
-        schema,
-        vec![
-            Arc::new(Int32Array::from(vec![1, -1, 0, 2, 3, 4, 5, 6, 7, 8])),
-            Arc::new(TimestampMillisecondArray::from(timestamps)),
-        ],
-    )?)
-}
-
-#[fixture]
-pub fn time_series_record_batch_years() -> Result<RecordBatch> {
-    let fields = vec![
-        Field::new("value", DataType::Int32, false),
-        Field::new("timestamp", DataType::Timestamp(Millisecond, None), false),
-    ];
-
-    let schema = Arc::new(Schema::new(fields));
-
-    let start_time = DateTime::from_timestamp(60, 0).unwrap();
-    let timestamps: Vec<i64> = (0..10)
-        .map(|i| (start_time + Duration::days(i * 366)).timestamp_millis())
-        .collect();
-
-    Ok(RecordBatch::try_new(
-        schema,
-        vec![
-            Arc::new(Int32Array::from(vec![1, -1, 0, 2, 3, 4, 5, 6, 7, 8])),
-            Arc::new(TimestampMillisecondArray::from(timestamps)),
-        ],
-    )?)
 }
