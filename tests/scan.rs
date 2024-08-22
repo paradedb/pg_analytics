@@ -19,17 +19,17 @@ mod fixtures;
 
 use std::fs::File;
 
-use anyhow::Result;
-use datafusion::parquet::arrow::ArrowWriter;
-use deltalake::operations::create::CreateBuilder;
-use deltalake::writer::{DeltaWriter, RecordBatchWriter};
-use fixtures::arrow::{
+use crate::fixtures::arrow::{
     delta_primitive_record_batch, primitive_record_batch, primitive_setup_fdw_local_file_delta,
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
     primitive_setup_fdw_s3_listing,
 };
-use fixtures::db::Query;
-use fixtures::{conn, duckdb_conn, tempdir, s3, S3};
+use crate::fixtures::db::Query;
+use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
+use anyhow::Result;
+use datafusion::parquet::arrow::ArrowWriter;
+use deltalake::operations::create::CreateBuilder;
+use deltalake::writer::{DeltaWriter, RecordBatchWriter};
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
 use sqlx::types::{BigDecimal, Json, Uuid};

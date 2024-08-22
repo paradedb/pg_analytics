@@ -17,9 +17,9 @@
 
 mod fixtures;
 
+use crate::fixtures::db::Query;
+use crate::fixtures::{conn, s3, S3};
 use anyhow::Result;
-use fixtures::db::Query;
-use fixtures::{conn, s3, S3};
 use rstest::*;
 use sqlx::PgConnection;
 

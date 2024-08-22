@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // Copyright (c) 2023-2024 Retake, Inc.
 //
 // This file is part of ParadeDB - Postgres for Search and Analytics
@@ -42,7 +44,6 @@ fn array_data() -> ArrayData {
 }
 
 // Fixed size binary is not supported yet, but this will be useful for test data when we do support.
-#[allow(unused)]
 fn fixed_size_array_data() -> ArrayData {
     let values: [u8; 15] = *b"hellotherearrow"; // Ensure length is consistent
 

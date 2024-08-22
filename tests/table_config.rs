@@ -17,14 +17,14 @@
 
 mod fixtures;
 
-use anyhow::Result;
-use datafusion::parquet::arrow::ArrowWriter;
-use fixtures::arrow::{
+use crate::fixtures::arrow::{
     primitive_record_batch, primitive_setup_fdw_local_file_listing, record_batch_with_casing,
     setup_local_file_listing_with_casing,
 };
-use fixtures::db::Query;
-use fixtures::{conn, tempdir};
+use crate::fixtures::db::Query;
+use crate::fixtures::{conn, tempdir};
+use anyhow::Result;
+use datafusion::parquet::arrow::ArrowWriter;
 use rstest::*;
 use sqlx::PgConnection;
 use std::fs::File;
