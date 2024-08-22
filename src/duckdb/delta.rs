@@ -17,29 +17,22 @@
 
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use strum::{AsRefStr, EnumIter};
 
+#[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 pub enum DeltaOption {
+    #[strum(serialize = "files")]
     Files,
+    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
 }
 
 impl DeltaOption {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::Files => "files",
-            Self::PreserveCasing => "preserve_casing",
-        }
-    }
-
     pub fn is_required(&self) -> bool {
         match self {
             Self::Files => true,
             Self::PreserveCasing => false,
         }
-    }
-
-    pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Files, Self::PreserveCasing].into_iter()
     }
 }
 
@@ -51,7 +44,7 @@ pub fn create_view(
     let files = format!(
         "'{}'",
         table_options
-            .get(DeltaOption::Files.as_str())
+            .get(DeltaOption::Files.as_ref())
             .ok_or_else(|| anyhow!("files option is required"))?
     );
 
@@ -70,7 +63,7 @@ mod tests {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
-            DeltaOption::Files.as_str().to_string(),
+            DeltaOption::Files.as_ref().to_string(),
             "/data/delta".to_string(),
         )]);
 
