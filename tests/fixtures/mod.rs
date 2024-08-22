@@ -15,6 +15,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+pub mod arrow;
+pub mod db;
+pub mod tables;
+
 use anyhow::Result;
 use async_std::task::block_on;
 use aws_config::{BehaviorVersion, Region};
@@ -31,7 +35,6 @@ use futures::future::{BoxFuture, FutureExt};
 use rstest::*;
 use serde::Serialize;
 use serde_arrow::schema::{SchemaLike, TracingOptions};
-use shared::fixtures::tempfile::TempDir;
 use sqlx::PgConnection;
 use std::sync::Arc;
 use std::{
@@ -45,11 +48,11 @@ use testcontainers_modules::{
     testcontainers::{runners::AsyncRunner, RunnableImage},
 };
 
-pub use shared::fixtures::db::*;
-#[allow(unused_imports)]
-pub use shared::fixtures::tables::*;
-#[allow(unused_imports)]
-pub use shared::fixtures::utils::*;
+use crate::nyc_trips::NycTripsTable;
+
+pub use crate::arrow::*;
+pub use crate::db::*;
+pub use crate::tables::*;
 
 #[fixture]
 pub fn database() -> Db {
@@ -214,13 +217,8 @@ pub async fn s3() -> S3 {
 }
 
 #[fixture]
-pub fn tempdir() -> TempDir {
-    shared::fixtures::tempfile::tempdir().unwrap()
-}
-
-#[fixture]
-pub fn tempfile() -> std::fs::File {
-    shared::fixtures::tempfile::tempfile().unwrap()
+pub fn tempdir() -> tempfile::TempDir {
+    tempfile::tempdir().unwrap()
 }
 
 #[fixture]

@@ -22,6 +22,8 @@ use fixtures::*;
 use rstest::*;
 use sqlx::PgConnection;
 
+use crate::nyc_trips::NycTripsTable;
+
 const S3_BUCKET: &str = "test-trip-setup";
 const S3_KEY: &str = "test_trip_setup.parquet";
 
