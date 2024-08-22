@@ -18,11 +18,12 @@
 mod fixtures;
 
 use anyhow::Result;
-use fixtures::*;
+use fixtures::db::Query;
+use fixtures::{conn, s3, S3};
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::nyc_trips::NycTripsTable;
+use crate::fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_BUCKET: &str = "test-trip-setup";
 const S3_KEY: &str = "test_trip_setup.parquet";

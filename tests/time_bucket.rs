@@ -21,7 +21,9 @@ use anyhow::Result;
 use chrono::NaiveDateTime;
 use datafusion::parquet::arrow::ArrowWriter;
 use fixtures::arrow::primitive_setup_fdw_local_file_listing;
-use fixtures::*;
+use fixtures::db::Query;
+use fixtures::tables::nyc_trips::NycTripsTable;
+use fixtures::{conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years};
 use rstest::*;
 use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
@@ -30,8 +32,6 @@ use std::str::FromStr;
 use tempfile::TempDir;
 use time::Date;
 use time::Month::January;
-
-use crate::nyc_trips::NycTripsTable;
 
 #[rstest]
 async fn test_time_bucket_minutes_duckdb(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {

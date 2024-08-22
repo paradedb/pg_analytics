@@ -1,7 +1,8 @@
 mod fixtures;
 
 use anyhow::Result;
-use fixtures::*;
+use fixtures::db::Query;
+use fixtures::conn;
 use rstest::*;
 use sqlx::PgConnection;
 

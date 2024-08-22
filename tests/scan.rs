@@ -28,7 +28,8 @@ use fixtures::arrow::{
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
     primitive_setup_fdw_s3_listing,
 };
-use fixtures::*;
+use fixtures::db::Query;
+use fixtures::{conn, duckdb_conn, tempdir, s3, S3};
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
 use sqlx::types::{BigDecimal, Json, Uuid};
@@ -38,8 +39,8 @@ use std::str::FromStr;
 use tempfile::TempDir;
 use time::macros::{date, datetime, time};
 
-use crate::duckdb_types::DuckdbTypesTable;
-use crate::nyc_trips::NycTripsTable;
+use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
+use crate::fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";

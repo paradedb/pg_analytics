@@ -48,11 +48,8 @@ use testcontainers_modules::{
     testcontainers::{runners::AsyncRunner, RunnableImage},
 };
 
-use crate::nyc_trips::NycTripsTable;
-
-pub use crate::arrow::*;
-pub use crate::db::*;
-pub use crate::tables::*;
+use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use crate::fixtures::db::*;
 
 #[fixture]
 pub fn database() -> Db {

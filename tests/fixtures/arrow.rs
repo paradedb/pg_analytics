@@ -65,62 +65,6 @@ fn binary_array_data() -> ArrayData {
         .unwrap()
 }
 
-#[derive(Debug)]
-struct FieldDesc {
-    name: String,
-    data_type: DataType,
-    nullable: bool,
-    pg_type: String,
-}
-
-impl<T> From<(T, DataType, bool, T)> for FieldDesc
-where
-    T: ToString,
-{
-    fn from(value: (T, DataType, bool, T)) -> Self {
-        Self {
-            name: value.0.to_string(),
-            data_type: value.1,
-            nullable: value.2,
-            pg_type: value.3.to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct FieldSpec(Vec<FieldDesc>);
-
-impl FieldSpec {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn arrow_schema(&self) -> Schema {
-        let fields = self
-            .0
-            .iter()
-            .map(|fd| Field::new(&fd.name, fd.data_type.clone(), fd.nullable))
-            .collect::<Vec<_>>();
-        Schema::new(fields)
-    }
-
-    pub fn postgres_schema(&self) -> Vec<(&str, &str)> {
-        self.0
-            .iter()
-            .map(|fd| (fd.name.as_str(), fd.pg_type.as_str()))
-            .collect::<Vec<_>>()
-    }
-}
-
-impl<T> From<Vec<(T, DataType, bool, T)>> for FieldSpec
-where
-    T: ToString,
-{
-    fn from(value: Vec<(T, DataType, bool, T)>) -> Self {
-        Self(value.into_iter().map(FieldDesc::from).collect())
-    }
-}
-
 /// A separate version of the primitive_record_batch fixture,
 /// narrowed to only the types that Delta Lake supports.
 pub fn delta_primitive_record_batch() -> Result<RecordBatch> {
