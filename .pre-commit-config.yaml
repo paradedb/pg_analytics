@@ -74,3 +74,8 @@ repos:
     rev: v3.0.1
     hooks:
       - id: pylint
+
+  - repo: https://github.com/ComPWA/mirrors-taplo
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
