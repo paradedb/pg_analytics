@@ -17,17 +17,18 @@
 
 mod fixtures;
 
-use anyhow::Result;
-use datafusion::parquet::arrow::ArrowWriter;
-use fixtures::*;
-use rstest::*;
-use shared::fixtures::arrow::{
+use crate::fixtures::arrow::{
     primitive_record_batch, primitive_setup_fdw_local_file_listing, record_batch_with_casing,
     setup_local_file_listing_with_casing,
 };
-use shared::fixtures::tempfile::TempDir;
+use crate::fixtures::db::Query;
+use crate::fixtures::{conn, tempdir};
+use anyhow::Result;
+use datafusion::parquet::arrow::ArrowWriter;
+use rstest::*;
 use sqlx::PgConnection;
 use std::fs::File;
+use tempfile::TempDir;
 
 #[rstest]
 async fn test_table_case_sensitivity(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {

@@ -1,7 +1,8 @@
 mod fixtures;
 
+use crate::fixtures::conn;
+use crate::fixtures::db::Query;
 use anyhow::Result;
-use fixtures::*;
 use rstest::*;
 use sqlx::PgConnection;
 

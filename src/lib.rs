@@ -23,13 +23,10 @@ mod schema;
 
 use hooks::ExtensionHook;
 use pgrx::*;
-use shared::{
-    gucs::PostgresGlobalGucSettings,
-    // telemetry::{setup_telemetry_background_worker, ParadeExtension},
-};
 
+// TODO: Reactivate once we've properly integrated with the monorepo
 // A static variable is required to host grand unified configuration settings.
-pub static GUCS: PostgresGlobalGucSettings = PostgresGlobalGucSettings::new();
+// pub static GUCS: PostgresGlobalGucSettings = PostgresGlobalGucSettings::new();
 
 pg_module_magic!();
 
@@ -42,9 +39,8 @@ pub extern "C" fn _PG_init() {
         register_hook(&mut EXTENSION_HOOK)
     };
 
-    GUCS.init("pg_analytics");
-
-    // TODO: Reactivate once we've properly integrated with the monorepo
+    // TODO: Depends on above TODO
+    // GUCS.init("pg_analytics");
     // setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
 }
 

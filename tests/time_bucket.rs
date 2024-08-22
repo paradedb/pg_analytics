@@ -17,17 +17,21 @@
 
 mod fixtures;
 
+use crate::fixtures::arrow::primitive_setup_fdw_local_file_listing;
+use crate::fixtures::db::Query;
+use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use crate::fixtures::{
+    conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
+};
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use datafusion::parquet::arrow::ArrowWriter;
-use fixtures::*;
 use rstest::*;
-use shared::fixtures::arrow::primitive_setup_fdw_local_file_listing;
-use shared::fixtures::tempfile::TempDir;
 use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
 use std::fs::File;
 use std::str::FromStr;
+use tempfile::TempDir;
 use time::Date;
 use time::Month::January;
 
