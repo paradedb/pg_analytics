@@ -17,37 +17,34 @@
 
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use strum::{AsRefStr, EnumIter};
 
 use super::utils;
 
+#[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 pub enum ParquetOption {
+    #[strum(serialize = "binary_as_string")]
     BinaryAsString,
+    #[strum(serialize = "filename")]
     FileName,
+    #[strum(serialize = "file_row_number")]
     FileRowNumber,
+    #[strum(serialize = "files")]
     Files,
+    #[strum(serialize = "hive_partitioning")]
     HivePartitioning,
+    #[strum(serialize = "hive_types")]
     HiveTypes,
+    #[strum(serialize = "hive_types_autocast")]
     HiveTypesAutocast,
+    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
+    #[strum(serialize = "union_by_name")]
     UnionByName,
     // TODO: EncryptionConfig
 }
 
 impl ParquetOption {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::BinaryAsString => "binary_as_string",
-            Self::FileName => "file_name",
-            Self::FileRowNumber => "file_row_number",
-            Self::Files => "files",
-            Self::HivePartitioning => "hive_partitioning",
-            Self::HiveTypes => "hive_types",
-            Self::HiveTypesAutocast => "hive_types_autocast",
-            Self::PreserveCasing => "preserve_casing",
-            Self::UnionByName => "union_by_name",
-        }
-    }
-
     pub fn is_required(&self) -> bool {
         match self {
             Self::BinaryAsString => false,
@@ -61,21 +58,6 @@ impl ParquetOption {
             Self::UnionByName => false,
         }
     }
-
-    pub fn iter() -> impl Iterator<Item = Self> {
-        [
-            Self::BinaryAsString,
-            Self::FileName,
-            Self::FileRowNumber,
-            Self::Files,
-            Self::HivePartitioning,
-            Self::HiveTypes,
-            Self::HiveTypesAutocast,
-            Self::PreserveCasing,
-            Self::UnionByName,
-        ]
-        .into_iter()
-    }
 }
 
 pub fn create_view(
@@ -85,36 +67,36 @@ pub fn create_view(
 ) -> Result<String> {
     let files = Some(utils::format_csv(
         table_options
-            .get(ParquetOption::Files.as_str())
+            .get(ParquetOption::Files.as_ref())
             .ok_or_else(|| anyhow!("files option is required"))?,
     ));
 
     let binary_as_string = table_options
-        .get(ParquetOption::BinaryAsString.as_str())
+        .get(ParquetOption::BinaryAsString.as_ref())
         .map(|option| format!("binary_as_string = {option}"));
 
     let file_name = table_options
-        .get(ParquetOption::FileName.as_str())
+        .get(ParquetOption::FileName.as_ref())
         .map(|option| format!("filename = {option}"));
 
     let file_row_number = table_options
-        .get(ParquetOption::FileRowNumber.as_str())
+        .get(ParquetOption::FileRowNumber.as_ref())
         .map(|option| format!("file_row_number = {option}"));
 
     let hive_partitioning = table_options
-        .get(ParquetOption::HivePartitioning.as_str())
+        .get(ParquetOption::HivePartitioning.as_ref())
         .map(|option| format!("hive_partitioning = {option}"));
 
     let hive_types = table_options
-        .get(ParquetOption::HiveTypes.as_str())
+        .get(ParquetOption::HiveTypes.as_ref())
         .map(|option| format!("hive_types = {option}"));
 
     let hive_types_autocast = table_options
-        .get(ParquetOption::HiveTypesAutocast.as_str())
+        .get(ParquetOption::HiveTypesAutocast.as_ref())
         .map(|option| format!("hive_types_autocast = {option}"));
 
     let union_by_name = table_options
-        .get(ParquetOption::UnionByName.as_str())
+        .get(ParquetOption::UnionByName.as_ref())
         .map(|option| format!("union_by_name = {option}"));
 
     let create_parquet_str = [
@@ -146,7 +128,7 @@ mod tests {
         let schema_name = "main";
         let files = "/data/file.parquet";
         let table_options =
-            HashMap::from([(ParquetOption::Files.as_str().to_string(), files.to_string())]);
+            HashMap::from([(ParquetOption::Files.as_ref().to_string(), files.to_string())]);
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet('/data/file.parquet')";
         let actual = create_view(table_name, schema_name, table_options).unwrap();
 
@@ -165,7 +147,7 @@ mod tests {
         let schema_name = "main";
         let files = "/data/file1.parquet, /data/file2.parquet";
         let table_options =
-            HashMap::from([(ParquetOption::Files.as_str().to_string(), files.to_string())]);
+            HashMap::from([(ParquetOption::Files.as_ref().to_string(), files.to_string())]);
 
         let expected = "CREATE VIEW IF NOT EXISTS main.test AS SELECT * FROM read_parquet(['/data/file1.parquet', '/data/file2.parquet'])";
         let actual = create_view(table_name, schema_name, table_options).unwrap();
@@ -185,35 +167,35 @@ mod tests {
         let schema_name = "main";
         let table_options = HashMap::from([
             (
-                ParquetOption::Files.as_str().to_string(),
+                ParquetOption::Files.as_ref().to_string(),
                 "/data/file.parquet".to_string(),
             ),
             (
-                ParquetOption::BinaryAsString.as_str().to_string(),
+                ParquetOption::BinaryAsString.as_ref().to_string(),
                 "true".to_string(),
             ),
             (
-                ParquetOption::FileName.as_str().to_string(),
+                ParquetOption::FileName.as_ref().to_string(),
                 "false".to_string(),
             ),
             (
-                ParquetOption::FileRowNumber.as_str().to_string(),
+                ParquetOption::FileRowNumber.as_ref().to_string(),
                 "true".to_string(),
             ),
             (
-                ParquetOption::HivePartitioning.as_str().to_string(),
+                ParquetOption::HivePartitioning.as_ref().to_string(),
                 "true".to_string(),
             ),
             (
-                ParquetOption::HiveTypes.as_str().to_string(),
+                ParquetOption::HiveTypes.as_ref().to_string(),
                 "{'release': DATE, 'orders': BIGINT}".to_string(),
             ),
             (
-                ParquetOption::HiveTypesAutocast.as_str().to_string(),
+                ParquetOption::HiveTypesAutocast.as_ref().to_string(),
                 "true".to_string(),
             ),
             (
-                ParquetOption::UnionByName.as_str().to_string(),
+                ParquetOption::UnionByName.as_ref().to_string(),
                 "true".to_string(),
             ),
         ]);
