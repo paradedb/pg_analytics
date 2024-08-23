@@ -311,7 +311,6 @@ jobs:
 
       # Note: We need to specify bash as the shell to ensure that it doesn't default to /bin/sh on Debian, which doesn't support the `[[` syntax
       - name: Initialize pgrx for Current PostgreSQL Version
-        working-directory: pg_analytics/
         shell: bash
         run: |
           if [[ "${{ matrix.image }}" == "redhat/ubi8:latest" || "${{ matrix.image }}" == "redhat/ubi9:latest" ]]; then
@@ -322,7 +321,6 @@ jobs:
           cargo pgrx init --pg${{ matrix.pg_version }}=$PG_CONFIG_PATH
 
       - name: Package pg_analytics Extension with pgrx
-        working-directory: pg_analytics/
         run: |
           if [[ "${{ matrix.image }}" == "redhat/ubi8:latest" || "${{ matrix.image }}" == "redhat/ubi9:latest" ]]; then
             PG_CONFIG_PATH="/usr/pgsql-${{ matrix.pg_version }}/bin/pg_config"
@@ -358,7 +356,7 @@ jobs:
           echo 'Architecture: ${{ matrix.arch }}' >> $CONTROL_FILE
           echo 'Depends: postgresql-${{ matrix.pg_version }}' >> $CONTROL_FILE
           echo 'Maintainer: ParadeDB <support@paradedb.com>' >> $CONTROL_FILE
-          echo 'Description: An analytical query engine for Postgres' >> $CONTROL_FILE
+          echo 'Description: DuckDB-powered analytics for Postgres' >> $CONTROL_FILE
 
           # Create .deb package
           sudo chown -R root:root ${package_dir}
@@ -377,9 +375,9 @@ jobs:
           Name:           pg_analytics_${{ matrix.pg_version }}
           Version:        ${{ steps.version.outputs.tag_version }}
           Release:        1%{?dist}
-          Summary:        An analytical query engine for Postgres
+          Summary:        DuckDB-powered analytics for Postgres
           License:        GNU Affero General Public License v3.0
-          URL:            https://github.com/paradedb/paradedb
+          URL:            https://github.com/paradedb/pg_analytics
 
           BuildRequires:  postgresql${{ matrix.pg_version }}-devel
           Requires:       postgresql${{ matrix.pg_version }}-server
