@@ -46,8 +46,7 @@ pub trait BaseFdw {
 
     async fn begin_scan_impl(
         &mut self,
-        // TODO: Push down quals
-        _quals: &[Qual],
+        quals: &[Qual],
         columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
@@ -93,6 +92,16 @@ pub trait BaseFdw {
         };
 
         let mut sql = format!("SELECT {targets} FROM {schema_name}.{table_name}");
+
+        if !quals.is_empty() {
+            let mut formatter = DuckDbFormatter::new();
+            let where_clauses = quals
+                .iter()
+                .map(|x| x.deparse_with_fmt(&mut formatter))
+                .collect::<Vec<String>>()
+                .join(" AND ");
+            sql.push_str(&format!(" WHERE {}", where_clauses));
+        }
 
         if !sorts.is_empty() {
             let order_by = sorts
@@ -245,4 +254,30 @@ pub enum BaseFdwError {
 
     #[error(transparent)]
     Options(#[from] OptionsError),
+}
+
+struct DuckDbFormatter {}
+
+impl CellFormatter for DuckDbFormatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            Cell::Bytea(v) => {
+                let byte_u8 = unsafe { varlena_to_byte_slice(*v) };
+                let hex = byte_u8
+                    .iter()
+                    .map(|b| format!(r#"\x{:02X}"#, b))
+                    .collect::<Vec<String>>()
+                    .join("");
+                format!("'{}'", hex)
+            }
+
+            cell => format!("{}", cell),
+        }
+    }
+}
+
+impl DuckDbFormatter {
+    fn new() -> Self {
+        Self {}
+    }
 }
