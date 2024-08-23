@@ -19,46 +19,15 @@
 
 mod fixtures;
 
-use crate::fixtures::conn;
+use crate::fixtures::{arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query};
 use anyhow::Result;
 use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::cast::as_binary_array;
 use rstest::rstest;
-use shared::fixtures::{
-    arrow::{primitive_create_foreign_data_wrapper, primitive_create_server},
-    db::Query,
-};
 use sqlx::PgConnection;
 use std::sync::Arc;
-
-pub fn primitive_create_spatial_table(server: &str, table: &str) -> String {
-    format!(
-        "CREATE FOREIGN TABLE {table} (
-        geom bytea
-        )
-        SERVER {server}"
-    )
-}
-
-pub fn primitive_setup_fdw_local_file_spatial(local_file_path: &str, table: &str) -> String {
-    let create_foreign_data_wrapper = primitive_create_foreign_data_wrapper(
-        "spatial_wrapper",
-        "spatial_fdw_handler",
-        "spatial_fdw_validator",
-    );
-    let create_server = primitive_create_server("spatial_server", "spatial_wrapper");
-    let create_table = primitive_create_spatial_table("spatial_server", table);
-
-    format!(
-        r#"
-        {create_foreign_data_wrapper};
-        {create_server};
-        {create_table} OPTIONS (files '{local_file_path}'); 
-    "#
-    )
-}
 
 // TODO: Currently, arrow-rs lacks support for geometry types, restricting this test to non-geometry data.
 // Once geometry support is available or a suitable workaround is found, expand this test to include geometry types.
