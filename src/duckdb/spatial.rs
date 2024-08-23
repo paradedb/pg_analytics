@@ -17,37 +17,34 @@
 
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
+use strum::{AsRefStr, EnumIter};
 
 /// SpatialOption is an enum that represents the options that can be passed to the st_read function.
 /// Reference https://github.com/duckdb/duckdb_spatial/blob/main/docs/functions.md#st_read
-#[derive(PartialEq)]
+#[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 pub enum SpatialOption {
+    #[strum(serialize = "files")]
     Files,
+    #[strum(serialize = "sequential_layer_scan")]
     SequentialLayerScan,
+    #[strum(serialize = "spatial_filter")]
     SpatialFilter,
+    #[strum(serialize = "open_options")]
     OpenOptions,
+    #[strum(serialize = "layer")]
     Layer,
+    #[strum(serialize = "allowed_drivers")]
     AllowedDrivers,
+    #[strum(serialize = "sibling_files")]
     SiblingFiles,
+    #[strum(serialize = "spatial_filter_box")]
     SpatialFilterBox,
+    #[strum(serialize = "keep_wkb")]
     KeepWkb,
 }
 
 impl SpatialOption {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Self::Files => "files",
-            Self::SequentialLayerScan => "sequential_layer_scan",
-            Self::SpatialFilter => "spatial_filter",
-            Self::OpenOptions => "open_options",
-            Self::Layer => "layer",
-            Self::AllowedDrivers => "allowed_drivers",
-            Self::SiblingFiles => "sibling_files",
-            Self::SpatialFilterBox => "spatial_filter_box",
-            Self::KeepWkb => "keep_wkb",
-        }
-    }
-
     pub fn is_required(&self) -> bool {
         match self {
             Self::Files => true,
@@ -61,21 +58,6 @@ impl SpatialOption {
             Self::KeepWkb => false,
         }
     }
-
-    pub fn iter() -> impl Iterator<Item = Self> {
-        [
-            Self::Files,
-            Self::SequentialLayerScan,
-            Self::SpatialFilter,
-            Self::OpenOptions,
-            Self::Layer,
-            Self::AllowedDrivers,
-            Self::SiblingFiles,
-            Self::SpatialFilterBox,
-            Self::KeepWkb,
-        ]
-        .into_iter()
-    }
 }
 
 pub fn create_view(
@@ -83,16 +65,16 @@ pub fn create_view(
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<String> {
-    if !table_options.contains_key(SpatialOption::Files.as_str()) {
+    if !table_options.contains_key(SpatialOption::Files.as_ref()) {
         return Err(anyhow!("Files option is required"));
     }
 
     let spatial_options = SpatialOption::iter()
         .filter_map(|param| {
-            let value = table_options.get(param.as_str())?;
+            let value = table_options.get(param.as_ref())?;
             Some(match param {
                 SpatialOption::Files => format!("'{}'", value),
-                _ => format!("{}={}", param.as_str(), value),
+                _ => format!("{}={}", param.as_ref(), value),
             })
         })
         .collect::<Vec<String>>();
