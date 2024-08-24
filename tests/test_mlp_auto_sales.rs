@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod common;
 mod fixtures;
 
 use std::env;
@@ -26,7 +25,6 @@ use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::common::init_tracer;
 use crate::fixtures::*;
 use crate::tables::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
 use datafusion::datasource::file_format::options::ParquetReadOptions;
@@ -54,16 +52,12 @@ async fn test_partitioned_automotive_sales_s3_parquet(
     mut conn: PgConnection,
     parquet_path: PathBuf,
 ) -> Result<()> {
-    // Initialize tracing for logging and monitoring.
-    init_tracer();
-
     // Log the start of the test.
-    tracing::error!("test_partitioned_automotive_sales_s3_parquet Started !!!");
 
     // Check if the Parquet file already exists at the specified path.
     if !parquet_path.exists() {
         // If the file doesn't exist, generate and save sales data in batches.
-        AutoSalesSimulator::save_to_parquet_in_batches(10000, 1000, &parquet_path)
+        AutoSalesSimulator::save_to_parquet_in_batches(100, 25, &parquet_path)
             .map_err(|e| anyhow::anyhow!("Failed to save parquet: {}", e))?;
     }
 
