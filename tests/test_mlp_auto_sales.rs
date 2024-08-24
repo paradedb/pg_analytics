@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod common;
 mod fixtures;
 
 use std::env;
@@ -26,7 +25,6 @@ use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::common::init_tracer;
 use crate::fixtures::*;
 use crate::tables::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
 use datafusion::datasource::file_format::options::ParquetReadOptions;
@@ -54,9 +52,6 @@ async fn test_partitioned_automotive_sales_s3_parquet(
     mut conn: PgConnection,
     parquet_path: PathBuf,
 ) -> Result<()> {
-    // Initialize tracing for logging and monitoring.
-    init_tracer();
-
     // Log the start of the test.
     tracing::error!("test_partitioned_automotive_sales_s3_parquet Started !!!");
 
