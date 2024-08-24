@@ -32,7 +32,7 @@ use std::sync::Arc;
 // TODO: Currently, arrow-rs lacks support for geometry types, restricting this test to non-geometry data.
 // Once geometry support is available or a suitable workaround is found, expand this test to include geometry types.
 #[rstest]
-async fn test_arrow_types_local_file_sptail(mut conn: PgConnection) -> Result<()> {
+async fn test_arrow_types_local_file_spatial(mut conn: PgConnection) -> Result<()> {
     let current_path = std::env::current_dir()?;
     let file_path = current_path.join("tests/data/test.geojson");
 

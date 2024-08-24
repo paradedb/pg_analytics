@@ -97,7 +97,7 @@ mod tests {
         let table_name = "test";
         let schema_name = "main";
         let table_options = HashMap::from([(
-            SpatialOption::Files.as_str().to_string(),
+            SpatialOption::Files.as_ref().to_string(),
             "/data/spatial".to_string(),
         )]);
 
