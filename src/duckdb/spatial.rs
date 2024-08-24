@@ -20,6 +20,8 @@ use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum::{AsRefStr, EnumIter};
 
+use crate::fdw::base::OptionValidator;
+
 /// SpatialOption is an enum that represents the options that can be passed to the st_read function.
 /// Reference https://github.com/duckdb/duckdb_spatial/blob/main/docs/functions.md#st_read
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
@@ -44,8 +46,8 @@ pub enum SpatialOption {
     KeepWkb,
 }
 
-impl SpatialOption {
-    pub fn is_required(&self) -> bool {
+impl OptionValidator for SpatialOption {
+    fn is_required(&self) -> bool {
         match self {
             Self::Files => true,
             Self::SequentialLayerScan => false,

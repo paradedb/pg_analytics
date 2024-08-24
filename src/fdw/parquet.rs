@@ -20,11 +20,10 @@ use async_std::task;
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
 use std::collections::HashMap;
-use strum::IntoEnumIterator;
 use supabase_wrappers::prelude::*;
 
 use super::base::*;
-use crate::duckdb::parquet::ParquetOption;
+use crate::duckdb::{parquet::ParquetOption, secret::UserMappingOptions};
 
 #[wrappers_fdw(
     author = "ParadeDB",
@@ -111,23 +110,14 @@ impl ForeignDataWrapper<BaseFdwError> for ParquetFdw {
                 FOREIGN_DATA_WRAPPER_RELATION_ID => {}
                 FOREIGN_SERVER_RELATION_ID => {}
                 FOREIGN_TABLE_RELATION_ID => {
-                    let valid_options: Vec<String> = ParquetOption::iter()
-                        .map(|opt| opt.as_ref().to_string())
-                        .collect();
-
-                    validate_options(opt_list.clone(), valid_options)?;
-
-                    for opt in ParquetOption::iter() {
-                        if opt.is_required() {
-                            check_options_contain(&opt_list, opt.as_ref())?;
-                        }
-                    }
+                    validate_mapping_option::<ParquetOption>(opt_list)?;
                 }
-                // TODO: Sanitize user mapping options
+                USER_MAPPING_RELATION_ID => {
+                    validate_mapping_option::<UserMappingOptions>(opt_list)?;
+                }
                 _ => {}
             }
         }
-
         Ok(())
     }
 
