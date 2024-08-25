@@ -35,6 +35,7 @@ static mut EXTENSION_HOOK: ExtensionHook = ExtensionHook;
 #[pg_guard]
 pub extern "C" fn _PG_init() {
     #[allow(static_mut_refs)]
+    #[allow(deprecated)]
     unsafe {
         register_hook(&mut EXTENSION_HOOK)
     };
