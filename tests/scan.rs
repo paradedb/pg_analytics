@@ -102,7 +102,7 @@ async fn test_wrong_user_mapping_s3_listing(
     #[future(awt)] s3: S3,
     mut conn: PgConnection,
 ) -> Result<()> {
-    let s3_bucket = "test_wrong_user_mapping_s3_listing";
+    let s3_bucket = "test-wrong-user-mapping-s3-listing";
     let s3_key = "test_wrong_user_mapping_s3_listing.parquet";
     let s3_endpoint = s3.url.clone();
     let s3_object_path = format!("s3://{s3_bucket}/{s3_key}");
