@@ -32,14 +32,15 @@ macro_rules! fallback_warning {
     };
 }
 
+#[allow(deprecated)]
 pub async fn executor_run(
     query_desc: PgBox<pg_sys::QueryDesc>,
-    direction: pg_sys::ScanDirection,
+    direction: pg_sys::ScanDirection::Type,
     count: u64,
     execute_once: bool,
     prev_hook: fn(
         query_desc: PgBox<pg_sys::QueryDesc>,
-        direction: pg_sys::ScanDirection,
+        direction: pg_sys::ScanDirection::Type,
         count: u64,
         execute_once: bool,
     ) -> HookResult<()>,
@@ -61,7 +62,7 @@ pub async fn executor_run(
         });
 
     if rtable.is_null()
-        || query_desc.operation != pg_sys::CmdType_CMD_SELECT
+        || query_desc.operation != pg_sys::CmdType::CMD_SELECT
         || !is_duckdb_query
         // Tech Debt: Find a less hacky way to let COPY/CREATE go through
         || query.to_lowercase().starts_with("copy")

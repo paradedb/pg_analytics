@@ -26,13 +26,13 @@ duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "bundled",
   "extensions-full",
 ], rev = "e532dd6" }
-pgrx = "0.11.3"
+pgrx = "0.12.1"
 serde = "1.0.201"
 serde_json = "1.0.120"
 signal-hook = "0.3.17"
 signal-hook-async-std = "0.2.2"
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "27af09b" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "c6f5e79" }
 thiserror = "1.0.59"
 uuid = "1.9.1"
 
@@ -44,7 +44,7 @@ bytes = "1.7.1"
 datafusion = "37.1.0"
 deltalake = { version = "0.17.3", features = ["datafusion"] }
 futures = "0.3.30"
-pgrx-tests = "0.11.3"
+pgrx-tests = "0.12.1"
 rstest = "0.19.0"
 serde_arrow = { version = "0.11.3", features = ["arrow-51"] }
 soa_derive = "0.13.0"
@@ -60,3 +60,7 @@ tempfile = "3.12.0"
 testcontainers = "0.16.7"
 testcontainers-modules = { version = "0.4.2", features = ["localstack"] }
 time = { version = "0.3.34", features = ["serde"] }
+
+[[bin]]
+name = "pgrx_embed_pg_analytics"
+path = "src/bin/pgrx_embed.rs"
