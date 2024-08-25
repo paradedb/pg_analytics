@@ -15,9 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use anyhow::Result;
 use pgrx::*;
 use std::ffi::CStr;
 use std::str::Utf8Error;
+
+use crate::duckdb::connection;
 
 pub fn get_current_query(
     planned_stmt: *mut pg_sys::PlannedStmt,
@@ -78,4 +81,42 @@ pub fn get_query_relations(planned_stmt: *mut pg_sys::PlannedStmt) -> Vec<PgRela
     }
 
     relations
+}
+
+pub fn set_search_path_by_pg() -> Result<()> {
+    let mut search_path = get_postgres_search_path();
+    let duckdb_schemas = connection::get_available_schemas()?;
+
+    // Filter schemas. If one of schemas doesn't exist, it will cause the DuckDB 'SET search_path' to fail.
+    search_path.retain(|schema| duckdb_schemas.contains(schema));
+
+    // Set duckdb catalog search path
+    connection::set_search_path(search_path)?;
+
+    Ok(())
+}
+
+fn get_postgres_search_path() -> Vec<String> {
+    let active_schemas =
+        unsafe { PgList::<pg_sys::Oid>::from_pg(pg_sys::fetch_search_path(false)) };
+
+    let mut schema_vec: Vec<String> = Vec::with_capacity(active_schemas.len());
+    for schema_oid in active_schemas.iter_oid() {
+        let tuple = unsafe {
+            pg_sys::SearchSysCache1(
+                pg_sys::SysCacheIdentifier::NAMESPACEOID as i32,
+                schema_oid.into_datum().unwrap(),
+            )
+        };
+
+        if !tuple.is_null() {
+            let pg_namespace = unsafe { pg_sys::GETSTRUCT(tuple) as pg_sys::Form_pg_namespace };
+            let name = pg_sys::name_data_to_str(unsafe { &(*pg_namespace).nspname });
+            schema_vec.push(name.to_string());
+
+            unsafe { pg_sys::ReleaseSysCache(tuple) };
+        }
+    }
+
+    schema_vec
 }
