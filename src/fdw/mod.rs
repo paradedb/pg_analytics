@@ -21,4 +21,5 @@ pub mod delta;
 pub mod handler;
 pub mod iceberg;
 pub mod parquet;
+pub mod spatial;
 pub mod trigger;

@@ -222,6 +222,21 @@ fn duckdb_type_to_pg(column_name: &str, duckdb_type: &str) -> Result<String> {
         .replace("TIMESTAMP_NS", "TIMESTAMP")
         .replace("TIME WITH TIME ZONE", "TIME");
 
+    // DuckDB spatial types conversions to PostgreSQL
+    // DuckDB-Spatial abstracts all geometric types as the GEOMETRY data type when
+    // running the st_read function, which is stored as a BLOB. Therefore, we can
+    // treat it the same way we handle BLOB data. Later, if users want to manipulate
+    // the geometry using PostGIS or other extensions, it should still be compatible.
+    postgres_type = postgres_type
+        .replace("GEOMETRY", "TEXT")
+        .replace("WKB_BLOB", "TEXT")
+        .replace("POINT_2D", "POINT")
+        .replace("POINT_3D", "POINT")
+        .replace("POINT_4D", "POINT")
+        .replace("BOX_2D", "BOX")
+        .replace("POLYGON_2D", "POLYGON")
+        .replace("LINESTRING_2D", "LINE");
+
     if postgres_type.starts_with("STRUCT") {
         postgres_type = "JSONB".to_string();
     }

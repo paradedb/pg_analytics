@@ -25,11 +25,7 @@ use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
 
-use super::csv;
-use super::delta;
-use super::iceberg;
-use super::parquet;
-use super::secret;
+use super::{csv, delta, iceberg, parquet, secret, spatial};
 
 // Global mutable static variables
 static mut GLOBAL_CONNECTION: Option<UnsafeCell<Connection>> = None;
@@ -55,10 +51,10 @@ fn init_globals() {
     });
 }
 
-fn iceberg_loaded() -> Result<bool> {
+fn check_extension_loaded(extension_name: &str) -> Result<bool> {
     unsafe {
         let conn = &mut *get_global_connection().get();
-        let mut statement = conn.prepare("SELECT * FROM duckdb_extensions() WHERE extension_name = 'iceberg' AND installed = true AND loaded = true")?;
+        let mut statement = conn.prepare(format!("SELECT * FROM duckdb_extensions() WHERE extension_name = '{extension_name}' AND installed = true AND loaded = true").as_str())?;
         match statement.query([])?.next() {
             Ok(Some(_)) => Ok(true),
             _ => Ok(false),
@@ -118,7 +114,7 @@ pub fn create_iceberg_view(
     schema_name: &str,
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
-    if !iceberg_loaded()? {
+    if !check_extension_loaded("iceberg")? {
         execute("INSTALL iceberg", [])?;
         execute("LOAD iceberg", [])?;
     }
@@ -133,6 +129,20 @@ pub fn create_parquet_view(
     table_options: HashMap<String, String>,
 ) -> Result<usize> {
     let statement = parquet::create_view(table_name, schema_name, table_options)?;
+    execute(statement.as_str(), [])
+}
+
+pub fn create_spatial_view(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+) -> Result<usize> {
+    if !check_extension_loaded("spatial")? {
+        execute("INSTALL spatial", [])?;
+        execute("LOAD spatial", [])?;
+    }
+
+    let statement = spatial::create_view(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 

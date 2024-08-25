@@ -24,6 +24,7 @@ pub enum FdwHandler {
     Parquet,
     Delta,
     Iceberg,
+    Spatial,
     Other,
 }
 
@@ -37,6 +38,7 @@ impl From<&str> for FdwHandler {
             "parquet_fdw_handler" => FdwHandler::Parquet,
             "delta_fdw_handler" => FdwHandler::Delta,
             "iceberg_fdw_handler" => FdwHandler::Iceberg,
+            "spatial_fdw_handler" => FdwHandler::Spatial,
             _ => FdwHandler::Other,
         }
     }

@@ -338,6 +338,33 @@ pub fn primitive_setup_fdw_s3_delta(
     )
 }
 
+pub fn primitive_create_spatial_table(server: &str, table: &str) -> String {
+    format!(
+        "CREATE FOREIGN TABLE {table} (
+        geom bytea
+        )
+        SERVER {server}"
+    )
+}
+
+pub fn primitive_setup_fdw_local_file_spatial(local_file_path: &str, table: &str) -> String {
+    let create_foreign_data_wrapper = primitive_create_foreign_data_wrapper(
+        "spatial_wrapper",
+        "spatial_fdw_handler",
+        "spatial_fdw_validator",
+    );
+    let create_server = primitive_create_server("spatial_server", "spatial_wrapper");
+    let create_table = primitive_create_spatial_table("spatial_server", table);
+
+    format!(
+        r#"
+        {create_foreign_data_wrapper};
+        {create_server};
+        {create_table} OPTIONS (files '{local_file_path}'); 
+    "#
+    )
+}
+
 pub fn primitive_setup_fdw_local_file_listing(local_file_path: &str, table: &str) -> String {
     setup_fdw_local_parquet_file_listing(local_file_path, table, &primitive_table_columns())
 }
