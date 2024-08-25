@@ -51,7 +51,7 @@ impl From<*mut pg_sys::ForeignServer> for FdwHandler {
         let handler_oid = unsafe { (*fdw).fdwhandler };
         let proc_tuple = unsafe {
             pg_sys::SearchSysCache1(
-                pg_sys::SysCacheIdentifier_PROCOID as i32,
+                pg_sys::SysCacheIdentifier::PROCOID as i32,
                 handler_oid.into_datum().unwrap(),
             )
         };

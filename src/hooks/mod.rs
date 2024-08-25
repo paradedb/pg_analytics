@@ -23,16 +23,17 @@ use pgrx::*;
 
 pub struct ExtensionHook;
 
+#[allow(deprecated)]
 impl hooks::PgHooks for ExtensionHook {
     fn executor_run(
         &mut self,
         query_desc: PgBox<pg_sys::QueryDesc>,
-        direction: pg_sys::ScanDirection,
+        direction: pg_sys::ScanDirection::Type,
         count: u64,
         execute_once: bool,
         prev_hook: fn(
             query_desc: PgBox<pg_sys::QueryDesc>,
-            direction: pg_sys::ScanDirection,
+            direction: pg_sys::ScanDirection::Type,
             count: u64,
             execute_once: bool,
         ) -> HookResult<()>,

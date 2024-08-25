@@ -68,7 +68,7 @@ pub fn get_query_relations(planned_stmt: *mut pg_sys::PlannedStmt) -> Vec<PgRela
                 rte = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeTblEntry;
             }
 
-            if (*rte).rtekind != pg_sys::RTEKind_RTE_RELATION {
+            if (*rte).rtekind != pg_sys::RTEKind::RTE_RELATION {
                 continue;
             }
             let relation = pg_sys::RelationIdGetRelation((*rte).relid);
