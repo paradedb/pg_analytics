@@ -79,6 +79,8 @@ pub enum CsvOption {
     Quote,
     #[strum(serialize = "sample_size")]
     SampleSize,
+    #[strum(serialize = "select")]
+    Select,
     #[strum(serialize = "sep")]
     Sep,
     #[strum(serialize = "skip")]
@@ -122,6 +124,7 @@ impl CsvOption {
             Self::PreserveCasing => false,
             Self::Quote => false,
             Self::SampleSize => false,
+            Self::Select => false,
             Self::Sep => false,
             Self::Skip => false,
             Self::Timestampformat => false,
@@ -305,7 +308,12 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_csv({create_csv_str})"))
+    let default_select = "*".to_string();
+    let select = table_options
+        .get(CsvOption::Select.as_ref())
+        .unwrap_or(&default_select);
+
+    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_csv({create_csv_str})"))
 }
 
 #[cfg(test)]

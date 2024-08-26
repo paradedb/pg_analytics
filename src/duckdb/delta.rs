@@ -25,6 +25,8 @@ pub enum DeltaOption {
     Files,
     #[strum(serialize = "preserve_casing")]
     PreserveCasing,
+    #[strum(serialize = "select")]
+    Select,
 }
 
 impl DeltaOption {
@@ -32,6 +34,7 @@ impl DeltaOption {
         match self {
             Self::Files => true,
             Self::PreserveCasing => false,
+            Self::Select => false,
         }
     }
 }
@@ -48,8 +51,13 @@ pub fn create_view(
             .ok_or_else(|| anyhow!("files option is required"))?
     );
 
+    let default_select = "*".to_string();
+    let select = table_options
+        .get(DeltaOption::Select.as_ref())
+        .unwrap_or(&default_select);
+
     Ok(format!(
-        "CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM delta_scan({files})"
+        "CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM delta_scan({files})"
     ))
 }
 
