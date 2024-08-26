@@ -205,7 +205,7 @@ async fn test_table_with_custom_schema(mut conn: PgConnection, tempdir: TempDir)
     // test non-quoted schema name
     "CREATE SCHEMA MY_SCHEMA".to_string().execute(&mut conn);
     match
-        format!( "CREATE FOREIGN TABLE MY_SCHEMA.MyTable () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
+        format!("CREATE FOREIGN TABLE MY_SCHEMA.MyTable () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
                 parquet_path.to_str().unwrap()
         ).execute_result(&mut conn) {
         Ok(_) => {}
@@ -216,6 +216,35 @@ async fn test_table_with_custom_schema(mut conn: PgConnection, tempdir: TempDir)
             );
         }
     }
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_configure_columns(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(
+        parquet_path.as_path().to_str().unwrap(),
+        "primitive_table",
+    )
+    .execute(&mut conn);
+
+    format!(
+        r#"CREATE FOREIGN TABLE primitive () SERVER parquet_server OPTIONS (files '{}', select 'boolean_col AS bool_col, 2020 as year')"#,
+        parquet_path.to_str().unwrap()
+    ).execute(&mut conn);
+
+    let retrieved_batch: Vec<(bool, i32)> =
+        "SELECT bool_col, year FROM primitive LIMIT 1".fetch(&mut conn);
+    assert_eq!(retrieved_batch, vec![(true, 2020)]);
 
     Ok(())
 }

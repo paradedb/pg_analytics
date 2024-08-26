@@ -27,6 +27,8 @@ pub enum IcebergOption {
     Files,
     #[strum(serialize = "preserve_casing")]
     PreserveCasing,
+    #[strum(serialize = "select")]
+    Select,
 }
 
 impl IcebergOption {
@@ -35,6 +37,7 @@ impl IcebergOption {
             Self::AllowMovedPaths => false,
             Self::Files => true,
             Self::PreserveCasing => false,
+            Self::Select => false,
         }
     }
 }
@@ -61,7 +64,12 @@ pub fn create_view(
         .collect::<Vec<String>>()
         .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM iceberg_scan({create_iceberg_str})"))
+    let default_select = "*".to_string();
+    let select = table_options
+        .get(IcebergOption::Select.as_ref())
+        .unwrap_or(&default_select);
+
+    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM iceberg_scan({create_iceberg_str})"))
 }
 
 #[cfg(test)]

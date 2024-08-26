@@ -41,6 +41,8 @@ pub enum ParquetOption {
     PreserveCasing,
     #[strum(serialize = "union_by_name")]
     UnionByName,
+    #[strum(serialize = "select")]
+    Select,
     // TODO: EncryptionConfig
 }
 
@@ -55,6 +57,7 @@ impl ParquetOption {
             Self::HiveTypes => false,
             Self::HiveTypesAutocast => false,
             Self::PreserveCasing => false,
+            Self::Select => false,
             Self::UnionByName => false,
         }
     }
@@ -114,7 +117,12 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
+    let default_select = "*".to_string();
+    let select = table_options
+        .get(ParquetOption::Select.as_ref())
+        .unwrap_or(&default_select);
+
+    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_parquet({create_parquet_str})"))
 }
 
 #[cfg(test)]
