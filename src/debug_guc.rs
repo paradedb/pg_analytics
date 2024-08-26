@@ -18,36 +18,36 @@
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
 
 pub struct DebugGucSettings {
-    // disable query pushdown to duckdb in executor hook.
-    pub disable_executor_pushdown: GucSetting<bool>,
+    // disable executor hook to test FDW
+    pub disable_executor: GucSetting<bool>,
 
-    // force exeuctor hook pushdown, if not report error.
-    pub force_executor_pushdown: GucSetting<bool>,
+    // disable FDW to test executor hook
+    pub disable_fdw: GucSetting<bool>,
 }
 
 impl DebugGucSettings {
     pub const fn new() -> Self {
         Self {
-            disable_executor_pushdown: GucSetting::<bool>::new(false),
-            force_executor_pushdown: GucSetting::<bool>::new(false),
+            disable_executor: GucSetting::<bool>::new(false),
+            disable_fdw: GucSetting::<bool>::new(false),
         }
     }
 
     pub fn init(&self) {
         GucRegistry::define_bool_guc(
-            "paradedb.debug_disable_executor_pushdown",
-            "Disable pushdown query in executor hook.",
-            "Disable pushdown query in executor hook.",
-            &self.disable_executor_pushdown,
+            "paradedb.disable_executor",
+            "Disable executor hook to test FDW.",
+            "Disable executor hook to test FDW.",
+            &self.disable_executor,
             GucContext::Userset,
             GucFlags::default(),
         );
 
         GucRegistry::define_bool_guc(
-            "paradedb.debug_force_executor_pushdown",
-            "Force pushdown query in executor hook.",
-            "Force pushdown query in executor hook.",
-            &self.force_executor_pushdown,
+            "paradedb.disable_fdw",
+            "Disable FDW to test executor hook.",
+            "Disable FDW to test executor hook.",
+            &self.disable_fdw,
             GucContext::Userset,
             GucFlags::default(),
         );

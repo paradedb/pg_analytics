@@ -485,35 +485,35 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     (&format!("{create_table_t2} OPTIONS (files '{file_path}');")).execute(&mut conn);
 
     // Set force executor hook pushdown
-    "SET paradedb.debug_force_executor_pushdown = true".execute(&mut conn);
+    "SET paradedb.disable_fdw = true".execute(&mut conn);
 
     let ret = "SELECT * FROM t1".execute_result(&mut conn);
-    assert!(ret.is_err());
+    assert!(ret.is_err(), "{:?}", ret);
 
     let ret = "SELECT * FROM t2".execute_result(&mut conn);
-    assert!(ret.is_err());
+    assert!(ret.is_err(), "{:?}", ret);
 
     let ret = "SELECT * FROM t3".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     let ret = "SELECT * FROM t3 LEFT JOIN tpch1.t1 ON TRUE".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     // Set search path
     "SET search_path TO tpch1, tpch2, public".execute(&mut conn);
 
     let ret = "SELECT * FROM t1".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     let ret = "SELECT * FROM t2".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     let ret = "SELECT * FROM t3".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     let ret =
         "SELECT * FROM t1 LEFT JOIN t2 ON true LEFT JOIN t3 on true".execute_result(&mut conn);
-    assert!(ret.is_ok());
+    assert!(ret.is_ok(), "{:?}", ret);
 
     Ok(())
 }

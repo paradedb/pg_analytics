@@ -49,7 +49,7 @@ pub async fn executor_run(
     ) -> HookResult<()>,
 ) -> Result<()> {
     #[cfg(debug_assertions)]
-    if DEBUG_GUCS.disable_executor_pushdown.get() {
+    if DEBUG_GUCS.disable_executor.get() {
         log!("executor hook query pushdown is disabled");
         prev_hook(query_desc, direction, count, execute_once);
         return Ok(());
@@ -78,8 +78,6 @@ pub async fn executor_run(
         || query.to_lowercase().starts_with("copy")
         || query.to_lowercase().starts_with("create")
     {
-        #[cfg(debug_assertions)]
-        check_force_pushdown("unsupported query");
         prev_hook(query_desc, direction, count, execute_once);
         return Ok(());
     }
@@ -92,8 +90,6 @@ pub async fn executor_run(
         Err(err) => {
             connection::clear_arrow();
             fallback_warning!(err.to_string());
-            #[cfg(debug_assertions)]
-            check_force_pushdown("query pushdown to duckdb fail");
             prev_hook(query_desc, direction, count, execute_once);
             return Ok(());
         }
@@ -109,8 +105,6 @@ pub async fn executor_run(
         Err(err) => {
             connection::clear_arrow();
             fallback_warning!(err.to_string());
-            #[cfg(debug_assertions)]
-            check_force_pushdown("get data batch error");
             prev_hook(query_desc, direction, count, execute_once);
             return Ok(());
         }
@@ -181,11 +175,4 @@ fn write_batches_to_slots(
     }
 
     Ok(())
-}
-
-#[cfg(debug_assertions)]
-fn check_force_pushdown(err: &str) {
-    if DEBUG_GUCS.force_executor_pushdown.get() {
-        error!("force pushdown fail: {err}")
-    }
 }
