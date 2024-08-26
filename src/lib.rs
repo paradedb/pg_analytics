@@ -16,17 +16,24 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 mod api;
+#[cfg(debug_assertions)]
+mod debug_guc;
 mod duckdb;
 mod fdw;
 mod hooks;
 mod schema;
 
+#[cfg(debug_assertions)]
+use crate::debug_guc::DebugGucSettings;
 use hooks::ExtensionHook;
 use pgrx::*;
 
 // TODO: Reactivate once we've properly integrated with the monorepo
 // A static variable is required to host grand unified configuration settings.
 // pub static GUCS: PostgresGlobalGucSettings = PostgresGlobalGucSettings::new();
+
+#[cfg(debug_assertions)]
+pub static DEBUG_GUCS: DebugGucSettings = DebugGucSettings::new();
 
 pg_module_magic!();
 
@@ -43,6 +50,9 @@ pub extern "C" fn _PG_init() {
     // TODO: Depends on above TODO
     // GUCS.init("pg_analytics");
     // setup_telemetry_background_worker(ParadeExtension::PgAnalytics);
+
+    #[cfg(debug_assertions)]
+    DEBUG_GUCS.init();
 }
 
 #[cfg(test)]
