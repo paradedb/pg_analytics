@@ -26,6 +26,9 @@ use crate::schema::cell::*;
 
 use super::query::*;
 
+#[cfg(debug_assertions)]
+use crate::DEBUG_GUCS;
+
 macro_rules! fallback_warning {
     ($msg:expr) => {
         warning!("This query was not fully pushed down to DuckDB because DuckDB returned an error. Query times may be impacted. If you would like to see this query pushed down, please submit a request to https://github.com/paradedb/paradedb/issues with the following context:\n{}", $msg);
@@ -45,6 +48,13 @@ pub async fn executor_run(
         execute_once: bool,
     ) -> HookResult<()>,
 ) -> Result<()> {
+    #[cfg(debug_assertions)]
+    if DEBUG_GUCS.disable_executor.get() {
+        log!("executor hook query pushdown is disabled");
+        prev_hook(query_desc, direction, count, execute_once);
+        return Ok(());
+    }
+
     let ps = query_desc.plannedstmt;
     let rtable = unsafe { (*ps).rtable };
     let query = get_current_query(ps, unsafe { CStr::from_ptr(query_desc.sourceText) })?;
@@ -71,6 +81,10 @@ pub async fn executor_run(
         prev_hook(query_desc, direction, count, execute_once);
         return Ok(());
     }
+
+    // Set DuckDB search path according search path in Postgres
+    // Make sure it could find unqualified relations.
+    set_search_path_by_pg()?;
 
     match connection::create_arrow(query.as_str()) {
         Err(err) => {

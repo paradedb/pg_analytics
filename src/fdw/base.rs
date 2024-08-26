@@ -25,6 +25,8 @@ use thiserror::Error;
 use super::handler::FdwHandler;
 use crate::duckdb::connection;
 use crate::schema::cell::*;
+#[cfg(debug_assertions)]
+use crate::DEBUG_GUCS;
 
 const DEFAULT_SECRET: &str = "default_secret";
 
@@ -77,9 +79,6 @@ pub trait BaseFdw {
             handler,
         )?;
 
-        // Ensure we are in the same DuckDB schema as the Postgres schema
-        connection::execute(format!("SET SCHEMA '{schema_name}'").as_str(), [])?;
-
         // Construct SQL scan statement
         let targets = if columns.is_empty() {
             "*".to_string()
@@ -122,6 +121,11 @@ pub trait BaseFdw {
     }
 
     async fn iter_scan_impl(&mut self, row: &mut Row) -> Result<Option<()>> {
+        #[cfg(debug_assertions)]
+        if DEBUG_GUCS.disable_fdw.get() {
+            error!("FDW is disabled. This may indicate that the executor hook did not execute as expected.")
+        }
+
         if !self.get_scan_started() {
             self.set_scan_started();
             let sql = self
