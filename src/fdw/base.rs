@@ -19,6 +19,7 @@ use anyhow::{anyhow, bail, Result};
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
 use std::collections::HashMap;
+use strum::IntoEnumIterator;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 
@@ -287,4 +288,23 @@ impl DuckDbFormatter {
     fn new() -> Self {
         Self {}
     }
+}
+
+pub(crate) trait OptionValidator {
+    fn is_required(&self) -> bool;
+}
+
+pub fn validate_mapping_option<T: IntoEnumIterator + OptionValidator + AsRef<str>>(
+    opt_list: Vec<Option<String>>,
+) -> Result<()> {
+    let valid_options: Vec<String> = T::iter().map(|opt| opt.as_ref().to_string()).collect();
+
+    validate_options(opt_list.clone(), valid_options)?;
+
+    for opt in T::iter() {
+        if opt.is_required() {
+            check_options_contain(&opt_list, opt.as_ref())?;
+        }
+    }
+    Ok(())
 }

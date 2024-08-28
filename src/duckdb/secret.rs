@@ -19,6 +19,8 @@ use anyhow::{anyhow, bail, Result};
 use std::collections::HashMap;
 use strum::{AsRefStr, EnumIter};
 
+use crate::fdw::base::OptionValidator;
+
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 pub enum UserMappingOptions {
     // Universal
@@ -70,9 +72,8 @@ pub enum UserMappingOptions {
     ProxyPassword,
 }
 
-impl UserMappingOptions {
-    #[allow(unused)]
-    pub fn is_required(&self) -> bool {
+impl OptionValidator for UserMappingOptions {
+    fn is_required(&self) -> bool {
         match self {
             Self::Type => true,
             Self::Provider => false,

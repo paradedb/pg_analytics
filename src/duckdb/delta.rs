@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use crate::fdw::base::OptionValidator;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use strum::{AsRefStr, EnumIter};
@@ -29,8 +30,8 @@ pub enum DeltaOption {
     Select,
 }
 
-impl DeltaOption {
-    pub fn is_required(&self) -> bool {
+impl OptionValidator for DeltaOption {
+    fn is_required(&self) -> bool {
         match self {
             Self::Files => true,
             Self::PreserveCasing => false,

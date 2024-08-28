@@ -19,6 +19,8 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use strum::{AsRefStr, EnumIter};
 
+use crate::fdw::base::OptionValidator;
+
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
 pub enum IcebergOption {
     #[strum(serialize = "allow_moved_paths")]
@@ -31,8 +33,8 @@ pub enum IcebergOption {
     Select,
 }
 
-impl IcebergOption {
-    pub fn is_required(&self) -> bool {
+impl OptionValidator for IcebergOption {
+    fn is_required(&self) -> bool {
         match self {
             Self::AllowMovedPaths => false,
             Self::Files => true,
