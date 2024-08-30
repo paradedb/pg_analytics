@@ -1089,11 +1089,11 @@ where
                     }
                 }
                 DataType::Date32 => match self.get_date_value::<i32, Date32Type>(index)? {
-                    Some(value) => Ok(Some(Cell::Date(value))),
+                    Some(value) => Ok(Some(Cell::Timestamp(value.into()))),
                     None => Ok(None),
                 },
                 DataType::Date64 => match self.get_date_value::<i64, Date64Type>(index)? {
-                    Some(value) => Ok(Some(Cell::Date(value))),
+                    Some(value) => Ok(Some(Cell::Timestamp(value.into()))),
                     None => Ok(None),
                 },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
@@ -1134,18 +1134,14 @@ where
                         None => Ok(None),
                     }
                 }
-                DataType::Date32 => {
-                    match self.get_timestamptz_value::<TimestampSecondType>(index, None)? {
-                        Some(value) => Ok(Some(Cell::Timestamptz(value))),
-                        None => Ok(None),
-                    }
-                }
-                DataType::Date64 => {
-                    match self.get_timestamptz_value::<TimestampSecondType>(index, None)? {
-                        Some(value) => Ok(Some(Cell::Timestamptz(value))),
-                        None => Ok(None),
-                    }
-                }
+                DataType::Date32 => match self.get_date_value::<i32, Date32Type>(index)? {
+                    Some(value) => Ok(Some(Cell::Timestamptz(value.into()))),
+                    None => Ok(None),
+                },
+                DataType::Date64 => match self.get_date_value::<i64, Date64Type>(index)? {
+                    Some(value) => Ok(Some(Cell::Timestamptz(value.into()))),
+                    None => Ok(None),
+                },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
                     name.to_string(),
                     unsupported.clone(),
