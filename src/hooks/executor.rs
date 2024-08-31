@@ -128,7 +128,7 @@ fn write_batches_to_slots(
         let dest = query_desc.dest;
         let startup = (*dest)
             .rStartup
-            .ok_or_else(|| anyhow!("Startup not found"))?;
+            .ok_or_else(|| anyhow!("rStartup not found"))?;
         startup(dest, query_desc.operation as i32, query_desc.tupDesc);
 
         let receive = (*dest)

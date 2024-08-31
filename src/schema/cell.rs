@@ -1020,15 +1020,15 @@ where
                 )
                 .into()),
             },
-            pg_sys::JSONBOID | pg_sys::JSONOID => match self.data_type() {
+            pg_sys::JSONOID => match self.data_type() {
                 DataType::Struct(_) => match self.get_struct_value(index)? {
-                    Some(value) => Ok(Some(Cell::Json(value))),
+                    Some(value) => Ok(Some(Cell::Json(Json(value.0)))),
                     None => Ok(None),
                 },
                 DataType::Utf8 => match self.get_primitive_value::<StringArray>(index)? {
                     Some(value) => {
                         let json_value: serde_json::Value = serde_json::from_str(value)?;
-                        Ok(Some(Cell::Json(datum::JsonB(json_value))))
+                        Ok(Some(Cell::Json(datum::Json(json_value))))
                     }
                     None => Ok(None),
                 },
@@ -1036,7 +1036,35 @@ where
                     match self.get_primitive_value::<LargeStringArray>(index)? {
                         Some(value) => {
                             let json_value: serde_json::Value = serde_json::from_str(value)?;
-                            Ok(Some(Cell::Json(datum::JsonB(json_value))))
+                            Ok(Some(Cell::Json(datum::Json(json_value))))
+                        }
+                        None => Ok(None),
+                    }
+                }
+                unsupported => Err(DataTypeError::DataTypeMismatch(
+                    name.to_string(),
+                    unsupported.clone(),
+                    PgOid::from(oid),
+                )
+                .into()),
+            },
+            pg_sys::JSONBOID => match self.data_type() {
+                DataType::Struct(_) => match self.get_struct_value(index)? {
+                    Some(value) => Ok(Some(Cell::JsonB(value))),
+                    None => Ok(None),
+                },
+                DataType::Utf8 => match self.get_primitive_value::<StringArray>(index)? {
+                    Some(value) => {
+                        let json_value: serde_json::Value = serde_json::from_str(value)?;
+                        Ok(Some(Cell::JsonB(datum::JsonB(json_value))))
+                    }
+                    None => Ok(None),
+                },
+                DataType::LargeUtf8 => {
+                    match self.get_primitive_value::<LargeStringArray>(index)? {
+                        Some(value) => {
+                            let json_value: serde_json::Value = serde_json::from_str(value)?;
+                            Ok(Some(Cell::JsonB(datum::JsonB(json_value))))
                         }
                         None => Ok(None),
                     }
