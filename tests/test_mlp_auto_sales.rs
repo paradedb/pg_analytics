@@ -57,7 +57,7 @@ async fn test_partitioned_automotive_sales_s3_parquet(
     // Check if the Parquet file already exists at the specified path.
     if !parquet_path.exists() {
         // If the file doesn't exist, generate and save sales data in batches.
-        AutoSalesSimulator::save_to_parquet_in_batches(100, 25, &parquet_path)
+        AutoSalesSimulator::save_to_parquet_in_batches(10000, 100, &parquet_path)
             .map_err(|e| anyhow::anyhow!("Failed to save parquet: {}", e))?;
     }
 
