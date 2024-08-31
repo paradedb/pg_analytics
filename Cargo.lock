@@ -4005,6 +4005,7 @@ name = "pg_analytics"
 version = "0.1.2"
 dependencies = [
  "anyhow",
+ "approx",
  "async-std",
  "aws-config",
  "aws-sdk-s3",
@@ -4018,6 +4019,7 @@ dependencies = [
  "geojson",
  "pgrx",
  "pgrx-tests",
+ "rand",
  "rstest",
  "serde",
  "serde_arrow",
