@@ -19,9 +19,10 @@
 
 use std::ffi::CString;
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use pg_sys::NodeTag;
 use pgrx::*;
+use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
 use super::query::*;
 
@@ -66,9 +67,11 @@ pub async fn process_utility_hook(
     }
 
     let need_exec_prev_hook = match stmt_type {
-        pg_sys::NodeTag::T_ExplainStmt => {
-            explain_query(pstmt.utilityStmt as *mut pg_sys::ExplainStmt, dest.as_ptr())?
-        }
+        pg_sys::NodeTag::T_ExplainStmt => explain_query(
+            query_string,
+            pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
+            dest.as_ptr(),
+        )?,
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -92,7 +95,11 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
 }
 
-fn explain_query(stmt: *mut pg_sys::ExplainStmt, dest: *mut pg_sys::DestReceiver) -> Result<bool> {
+fn explain_query(
+    query_string: &core::ffi::CStr,
+    stmt: *mut pg_sys::ExplainStmt,
+    dest: *mut pg_sys::DestReceiver,
+) -> Result<bool> {
     let query = unsafe { (*stmt).query as *mut pg_sys::Query };
 
     let query_relations = get_query_relations(unsafe { (*query).rtable });
@@ -102,17 +109,44 @@ fn explain_query(stmt: *mut pg_sys::ExplainStmt, dest: *mut pg_sys::DestReceiver
         return Ok(true);
     }
 
+    if unsafe { !(*stmt).options.is_null() } {
+        return Ok(false);
+    }
+
     unsafe {
         let tstate = pg_sys::begin_tup_output_tupdesc(
             dest,
             pg_sys::ExplainResultDesc(stmt),
             &pg_sys::TTSOpsVirtual,
         );
-        let c_str = CString::new("Duck db Scan: test").expect("CString::new failed");
+        let query = format!(
+            "DuckDB Scan: {}",
+            parse_query_from_utility_stmt(query_string)?
+        );
+        let query_c_str = CString::new(query)?;
 
-        pg_sys::do_text_output_multiline(tstate, c_str.as_ptr());
+        pg_sys::do_text_output_multiline(tstate, query_c_str.as_ptr());
         pg_sys::end_tup_output(tstate);
     }
 
     Ok(false)
+}
+
+fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<String> {
+    let query_string = query_string.to_str()?;
+
+    let dialect = PostgreSqlDialect {};
+    let utility = Parser::parse_sql(&dialect, query_string)?;
+
+    debug_assert!(utility.len() == 1);
+    match &utility[0] {
+        Statement::Explain {
+            describe_alias,
+            analyze,
+            verbose,
+            statement,
+            format,
+        } => Ok(statement.to_string()),
+        _ => bail!("unexpected utility statement: {}", query_string),
+    }
 }

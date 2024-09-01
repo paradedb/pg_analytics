@@ -86,6 +86,7 @@ impl hooks::PgHooks for ExtensionHook {
             prev_hook,
         ))
         .unwrap_or_else(|err| panic!("{}", err));
+
         HookResult::new(())
     }
 }
