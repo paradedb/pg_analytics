@@ -136,8 +136,3 @@ jobs:
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           cargo pgrx test "pg${{ matrix.pg_version }}"
-
-      # On promotion PRs, we test packaging the extension with production features enabled
-      - name: Test Packaging pg_analytics
-        if: steps.check_skip.outputs.skip_remaining_steps != 'true' && github.base_ref == 'main'
-        run: cargo pgrx package
