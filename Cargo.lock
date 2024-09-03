@@ -4038,6 +4038,7 @@ dependencies = [
  "testcontainers-modules",
  "thiserror",
  "time",
+ "tracing",
  "uuid",
 ]
 

@@ -61,6 +61,7 @@ time = { version = "0.3.36", features = ["serde"] }
 geojson = "0.24.1"
 rand = { version = "0.8.5" }
 approx = "0.5.1"
+tracing = "0.1"
 
 [[bin]]
 name = "pgrx_embed_pg_analytics"

@@ -29,6 +29,8 @@ use sqlx::FromRow;
 use sqlx::PgConnection;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 use time::PrimitiveDateTime;
 
 use datafusion::arrow::array::*;
@@ -610,5 +612,262 @@ impl AutoSalesTestRunner {
         );
 
         Ok(())
+    }
+}
+
+// Define a type alias for the complex type
+type QueryResult = Vec<(Option<i32>, Option<String>, Option<f64>, i64)>;
+
+impl AutoSalesTestRunner {
+    #[allow(unused)]
+    pub fn benchmark_query() -> String {
+        // This is a placeholder query. Replace with a more complex query that would benefit from caching.
+        r#"
+        SELECT year, manufacturer, AVG(price) as avg_price, COUNT(*) as sale_count
+        FROM auto_sales
+        WHERE year BETWEEN 2020 AND 2024
+        GROUP BY year, manufacturer
+        ORDER BY year, avg_price DESC
+        "#
+        .to_string()
+    }
+
+    #[allow(unused)]
+    async fn verify_benchmark_query(
+        df_sales_data: &DataFrame,
+        duckdb_results: QueryResult,
+    ) -> Result<()> {
+        // Execute the equivalent query on the DataFrame
+        let df_result = df_sales_data
+            .clone()
+            .filter(col("year").between(lit(2020), lit(2024)))?
+            .aggregate(
+                vec![col("year"), col("manufacturer")],
+                vec![
+                    avg(col("price")).alias("avg_price"),
+                    count(lit(1)).alias("sale_count"),
+                ],
+            )?
+            .sort(vec![
+                col("year").sort(true, false),
+                col("avg_price").sort(false, false),
+            ])?;
+
+        let df_results: QueryResult = df_result
+            .collect()
+            .await?
+            .into_iter()
+            .flat_map(|batch| {
+                let year = batch
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<Int32Array>()
+                    .unwrap();
+                let manufacturer = batch
+                    .column(1)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .unwrap();
+                let avg_price = batch
+                    .column(2)
+                    .as_any()
+                    .downcast_ref::<Float64Array>()
+                    .unwrap();
+                let sale_count = batch
+                    .column(3)
+                    .as_any()
+                    .downcast_ref::<Int64Array>()
+                    .unwrap();
+
+                (0..batch.num_rows())
+                    .map(move |i| {
+                        (
+                            Some(year.value(i)),
+                            Some(manufacturer.value(i).to_string()),
+                            Some(avg_price.value(i)),
+                            sale_count.value(i),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        // Compare results
+        assert_eq!(
+            duckdb_results.len(),
+            df_results.len(),
+            "Result set sizes do not match"
+        );
+
+        for (
+            (duck_year, duck_manufacturer, duck_avg_price, duck_count),
+            (df_year, df_manufacturer, df_avg_price, df_count),
+        ) in duckdb_results.iter().zip(df_results.iter())
+        {
+            assert_eq!(duck_year, df_year, "Year mismatch");
+            assert_eq!(duck_manufacturer, df_manufacturer, "Manufacturer mismatch");
+            assert_relative_eq!(
+                duck_avg_price.unwrap(),
+                df_avg_price.unwrap(),
+                epsilon = 0.01,
+                max_relative = 0.01
+            );
+            assert_eq!(duck_count, df_count, "Sale count mismatch");
+        }
+
+        Ok(())
+    }
+
+    #[allow(unused)]
+    pub async fn run_benchmark_iterations(
+        conn: &mut PgConnection,
+        query: &str,
+        iterations: usize,
+        warmup_iterations: usize,
+        enable_cache: bool,
+        df_sales_data: &DataFrame,
+    ) -> Result<Vec<Duration>> {
+        let cache_setting = if enable_cache { "true" } else { "false" };
+        format!(
+            "SELECT duckdb_execute($$SET enable_object_cache={}$$)",
+            cache_setting
+        )
+        .execute(conn);
+
+        // Warm-up phase
+        for _ in 0..warmup_iterations {
+            let _: QueryResult = query.fetch(conn);
+        }
+
+        let mut execution_times = Vec::with_capacity(iterations);
+        for _ in 0..iterations {
+            let start = Instant::now();
+            let query_val: QueryResult = query.fetch(conn);
+            let execution_time = start.elapsed();
+
+            let _ = Self::verify_benchmark_query(df_sales_data, query_val.clone()).await;
+
+            execution_times.push(execution_time);
+        }
+
+        Ok(execution_times)
+    }
+
+    #[allow(unused)]
+    fn average_duration(durations: &[Duration]) -> Duration {
+        durations.iter().sum::<Duration>() / durations.len() as u32
+    }
+
+    #[allow(unused)]
+    pub fn report_benchmark_results(
+        cache_disabled: Vec<Duration>,
+        cache_enabled: Vec<Duration>,
+        final_disabled: Vec<Duration>,
+    ) {
+        let calculate_metrics =
+            |durations: &[Duration]| -> (Duration, Duration, Duration, Duration, Duration, f64) {
+                let avg = Self::average_duration(durations);
+                let min = *durations.iter().min().unwrap_or(&Duration::ZERO);
+                let max = *durations.iter().max().unwrap_or(&Duration::ZERO);
+
+                let variance = durations
+                    .iter()
+                    .map(|&d| {
+                        let diff = d.as_secs_f64() - avg.as_secs_f64();
+                        diff * diff
+                    })
+                    .sum::<f64>()
+                    / durations.len() as f64;
+                let std_dev = variance.sqrt();
+
+                let mut sorted_durations = durations.to_vec();
+                sorted_durations.sort_unstable();
+                let percentile_95 = sorted_durations
+                    [((durations.len() as f64 * 0.95) as usize).min(durations.len() - 1)];
+
+                (
+                    avg,
+                    min,
+                    max,
+                    percentile_95,
+                    Duration::from_secs_f64(std_dev),
+                    std_dev,
+                )
+            };
+
+        let (
+            avg_disabled,
+            min_disabled,
+            max_disabled,
+            p95_disabled,
+            std_dev_disabled,
+            std_dev_disabled_secs,
+        ) = calculate_metrics(&cache_disabled);
+        let (
+            avg_enabled,
+            min_enabled,
+            max_enabled,
+            p95_enabled,
+            std_dev_enabled,
+            std_dev_enabled_secs,
+        ) = calculate_metrics(&cache_enabled);
+        let (
+            avg_final_disabled,
+            min_final_disabled,
+            max_final_disabled,
+            p95_final_disabled,
+            std_dev_final_disabled,
+            std_dev_final_disabled_secs,
+        ) = calculate_metrics(&final_disabled);
+
+        let improvement = (avg_final_disabled.as_secs_f64() - avg_enabled.as_secs_f64())
+            / avg_final_disabled.as_secs_f64()
+            * 100.0;
+
+        tracing::info!("Benchmark Results:");
+        tracing::info!("Cache Disabled:");
+        tracing::info!("  Average: {:?}", avg_disabled);
+        tracing::info!("  Minimum: {:?}", min_disabled);
+        tracing::info!("  Maximum: {:?}", max_disabled);
+        tracing::info!("  95th Percentile: {:?}", p95_disabled);
+        tracing::info!(
+            "  Standard Deviation: {:?} ({:.6} seconds)",
+            std_dev_disabled,
+            std_dev_disabled_secs
+        );
+
+        tracing::info!("Cache Enabled:");
+        tracing::info!("  Average: {:?}", avg_enabled);
+        tracing::info!("  Minimum: {:?}", min_enabled);
+        tracing::info!("  Maximum: {:?}", max_enabled);
+        tracing::info!("  95th Percentile: {:?}", p95_enabled);
+        tracing::info!(
+            "  Standard Deviation: {:?} ({:.6} seconds)",
+            std_dev_enabled,
+            std_dev_enabled_secs
+        );
+
+        tracing::info!("Final Cache Disabled:");
+        tracing::info!("  Average: {:?}", avg_final_disabled);
+        tracing::info!("  Minimum: {:?}", min_final_disabled);
+        tracing::info!("  Maximum: {:?}", max_final_disabled);
+        tracing::info!("  95th Percentile: {:?}", p95_final_disabled);
+        tracing::info!(
+            "  Standard Deviation: {:?} ({:.6} seconds)",
+            std_dev_final_disabled,
+            std_dev_final_disabled_secs
+        );
+
+        tracing::info!("Performance improvement with cache: {:.2}%", improvement);
+
+        // Add assertions
+        assert!(
+            avg_enabled < avg_disabled,
+            "Expected performance improvement with cache enabled"
+        );
+        assert!(
+            avg_enabled < avg_final_disabled,
+            "Expected performance improvement with cache enabled compared to final disabled state"
+        );
     }
 }
