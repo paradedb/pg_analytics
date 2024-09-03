@@ -5725,7 +5725,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "supabase-wrappers"
 version = "0.1.18"
-source = "git+https://github.com/paradedb/wrappers.git?rev=719628f#719628ff0cf12ee5cd36ca1a25c2c522b9991d73"
+source = "git+https://github.com/paradedb/wrappers.git?rev=9c979f0#9c979f08484006b1a9b8dd5bed395c720ce880c8"
 dependencies = [
  "pgrx",
  "supabase-wrappers-macros",
@@ -5737,7 +5737,7 @@ dependencies = [
 [[package]]
 name = "supabase-wrappers-macros"
 version = "0.1.16"
-source = "git+https://github.com/paradedb/wrappers.git?rev=719628f#719628ff0cf12ee5cd36ca1a25c2c522b9991d73"
+source = "git+https://github.com/paradedb/wrappers.git?rev=9c979f0#9c979f08484006b1a9b8dd5bed395c720ce880c8"
 dependencies = [
  "proc-macro2",
  "quote",
