@@ -17,6 +17,8 @@
 
 mod fixtures;
 
+use std::fs::File;
+
 use crate::fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
@@ -34,7 +36,6 @@ use sqlx::postgres::types::PgInterval;
 use sqlx::types::{BigDecimal, Json, Uuid};
 use sqlx::PgConnection;
 use std::collections::HashMap;
-use std::fs::File;
 use std::str::FromStr;
 use tempfile::TempDir;
 use time::macros::{date, datetime, time};

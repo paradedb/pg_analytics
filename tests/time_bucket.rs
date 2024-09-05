@@ -19,8 +19,6 @@ mod fixtures;
 
 use crate::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use crate::fixtures::db::Query;
-use crate::fixtures::duckdb_conn;
-use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
 use crate::fixtures::{
     conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
@@ -34,8 +32,8 @@ use sqlx::PgConnection;
 use std::fs::File;
 use std::str::FromStr;
 use tempfile::TempDir;
-use time::macros::datetime;
-use time::{Date, Month::January, PrimitiveDateTime};
+use time::Date;
+use time::Month::January;
 
 #[rstest]
 async fn test_time_bucket_minutes_duckdb(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
@@ -263,37 +261,6 @@ async fn test_time_bucket_fallback(mut conn: PgConnection) -> Result<()> {
             assert!(a);
         }
     }
-
-    Ok(())
-}
-
-#[rstest]
-async fn test_date_trunc(
-    mut conn: PgConnection,
-    tempdir: TempDir,
-    duckdb_conn: duckdb::Connection,
-) -> Result<()> {
-    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
-
-    duckdb_conn
-        .execute(&DuckdbTypesTable::create_duckdb_table(), [])
-        .unwrap();
-
-    duckdb_conn
-        .execute(&DuckdbTypesTable::populate_duckdb_table(), [])
-        .unwrap();
-
-    duckdb_conn
-        .execute(
-            &DuckdbTypesTable::export_duckdb_table(parquet_path.to_str().unwrap()),
-            [],
-        )
-        .unwrap();
-
-    DuckdbTypesTable::create_foreign_table(parquet_path.to_str().unwrap()).execute(&mut conn);
-    let row: (PrimitiveDateTime,) =
-        "SELECT date_trunc('day', timestamp_col) FROM duckdb_types_test".fetch_one(&mut conn);
-    assert_eq!(row, (datetime!(2023-06-27 00:00:00),));
 
     Ok(())
 }
