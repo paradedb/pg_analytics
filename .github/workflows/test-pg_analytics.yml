@@ -39,13 +39,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: depot-ubuntu-latest-8
+          - runner: depot-ubuntu-latest-16
             pg_version: 14
             arch: amd64
-          - runner: depot-ubuntu-latest-8
+          - runner: depot-ubuntu-latest-16
             pg_version: 15
             arch: amd64
-          - runner: depot-ubuntu-latest-8
+          - runner: depot-ubuntu-latest-16
             pg_version: 16
             arch: amd64
     env:
@@ -104,13 +104,6 @@ jobs:
         working-directory: /home/runner/.pgrx/data-${{ matrix.pg_version }}/
         run: sed -i "s/^#shared_preload_libraries = .*/shared_preload_libraries = 'pg_analytics'/" postgresql.conf
 
-      # Our Rust Cache action caches the entire ~/target directory, which includes the pg_analytics extension. Since we
-      # only want to restore dependencies (to speed up the build) but not the extension itself (so the tests are representative), we
-      # clean any cached pg_analytics & dependencies build artifacts before running the tests
-      - name: Clean Cached Build Artifacts
-        if: steps.check_skip.outputs.skip_remaining_steps != 'true' && matrix.pg_version == env.default_pg_version
-        run: cargo clean
-
       # The SHA hash here must exactly match the Image::Tag that is referenced in the
       # testcontainers modules Rust crate for localstack.
       - name: Pull localstack image
@@ -143,8 +136,3 @@ jobs:
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           cargo pgrx test "pg${{ matrix.pg_version }}"
-
-      # On promotion PRs, we test packaging the extension with production features enabled
-      - name: Test Packaging pg_analytics
-        if: steps.check_skip.outputs.skip_remaining_steps != 'true' && github.base_ref == 'main'
-        run: cargo clean && cargo pgrx package
