@@ -18,35 +18,35 @@ pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
 pg_test = []
 
 [dependencies]
-anyhow = "1.0.83"
-async-std = { version = "1.12.0", features = ["tokio1", "attributes"] }
-chrono = "0.4.34"
+anyhow = "1.0.87"
+async-std = { version = "1.13.0", features = ["tokio1", "attributes"] }
+chrono = "0.4.38"
 duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "bundled",
   "extensions-full",
 ], rev = "e532dd6" }
-pgrx = "0.12.1"
-serde = "1.0.201"
-serde_json = "1.0.120"
+pgrx = "0.12.4"
+serde = "1.0.210"
+serde_json = "1.0.128"
 signal-hook = "0.3.17"
 strum = { version = "0.26.3", features = ["derive"] }
 supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "e734901" }
-thiserror = "1.0.59"
-uuid = "1.9.1"
+thiserror = "1.0.63"
+uuid = "1.10.0"
 
 [dev-dependencies]
-aws-config = "1.5.1"
-aws-sdk-s3 = "1.34.0"
-bigdecimal = { version = "0.3.0", features = ["serde"] }
+aws-config = "1.5.6"
+aws-sdk-s3 = "1.49.0"
+bigdecimal = { version = "0.3.1", features = ["serde"] }
 bytes = "1.7.1"
 datafusion = "37.1.0"
 deltalake = { version = "0.17.3", features = ["datafusion"] }
 futures = "0.3.30"
-pgrx-tests = "0.12.1"
+pgrx-tests = "0.12.4"
 rstest = "0.19.0"
-serde_arrow = { version = "0.11.3", features = ["arrow-51"] }
+serde_arrow = { version = "0.11.7", features = ["arrow-51"] }
 soa_derive = "0.13.0"
-sqlx = { version = "0.7.3", features = [
+sqlx = { version = "0.7.4", features = [
   "postgres",
   "runtime-async-std",
   "time",
@@ -56,8 +56,8 @@ sqlx = { version = "0.7.3", features = [
 ] }
 tempfile = "3.12.0"
 testcontainers = "0.16.7"
-testcontainers-modules = { version = "0.4.2", features = ["localstack"] }
-time = { version = "0.3.34", features = ["serde"] }
+testcontainers-modules = { version = "0.4.3", features = ["localstack"] }
+time = { version = "0.3.36", features = ["serde"] }
 geojson = "0.24.1"
 
 [[bin]]
