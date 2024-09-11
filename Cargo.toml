@@ -18,7 +18,7 @@ pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
 pg_test = []
 
 [dependencies]
-anyhow = "1.0.87"
+anyhow = "1.0.88"
 async-std = { version = "1.13.0", features = ["tokio1", "attributes"] }
 chrono = "0.4.38"
 duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
@@ -30,7 +30,7 @@ serde = "1.0.210"
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "0b5273c" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "19d6132" }
 thiserror = "1.0.63"
 uuid = "1.10.0"
 
