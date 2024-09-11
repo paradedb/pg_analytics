@@ -171,3 +171,25 @@ async fn test_explain_analyze_federated(
 
     Ok(())
 }
+
+#[rstest]
+async fn test_explian_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+    NycTripsTable::setup().execute(&mut conn);
+
+    let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
+    s3.client.create_bucket().bucket(S3_BUCKET).send().await?;
+    s3.create_bucket(S3_BUCKET).await?;
+    s3.put_rows(S3_BUCKET, S3_KEY, &rows).await?;
+
+    NycTripsTable::setup_s3_listing_fdw(&s3.url.clone(), &format!("s3://{S3_BUCKET}/{S3_KEY}"))
+        .execute(&mut conn);
+
+    let explain: Vec<(String,)> = "EXPLAIN SELECT COUNT(*) FROM trips".fetch(&mut conn);
+    assert_eq!(explain[0].0, "DuckDB Scan: SELECT COUNT(*) FROM trips");
+
+    let explain: Result<Vec<(String,)>, sqlx::Error> =
+        "EXPLAIN verbose SELECT COUNT(*) FROM trips".fetch_result(&mut conn);
+    assert!(explain.is_err());
+
+    Ok(())
+}

@@ -110,6 +110,7 @@ fn explain_query(
     }
 
     if unsafe { !(*stmt).options.is_null() } {
+        error!("No support explain options for DuckDB pushdown query.");
         return Ok(false);
     }
 
@@ -141,11 +142,11 @@ fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<Strin
     debug_assert!(utility.len() == 1);
     match &utility[0] {
         Statement::Explain {
-            describe_alias,
-            analyze,
-            verbose,
+            describe_alias:_,
+            analyze:_,
+            verbose: _,
             statement,
-            format,
+            format:_,
         } => Ok(statement.to_string()),
         _ => bail!("unexpected utility statement: {}", query_string),
     }
