@@ -93,6 +93,7 @@ jobs:
           echo "/usr/lib/postgresql/${{ matrix.pg_version }}/bin" >> $GITHUB_PATH
 
       - name: Extract pgrx version
+        if: steps.check_skip.outputs.skip_remaining_steps != 'true'
         run: echo "PGRX_VERSION=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv)" >> $GITHUB_ENV
 
       - name: Install pgrx & llvm-tools-preview
