@@ -173,7 +173,7 @@ async fn test_explain_analyze_federated(
 }
 
 #[rstest]
-async fn test_explian_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+async fn test_explain_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
 
     let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
