@@ -246,6 +246,9 @@ pub fn register_duckdb_view(
             FdwHandler::Spatial => {
                 connection::create_spatial_view(table_name, schema_name, table_options)?;
             }
+            FdwHandler::Json => {
+                connection::create_json_view(table_name, schema_name, table_options)?;
+            }
             _ => {
                 bail!("got unexpected fdw_handler")
             }

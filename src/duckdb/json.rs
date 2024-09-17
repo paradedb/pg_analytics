@@ -17,13 +17,13 @@
 
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
-use strum::{AsRefStr, EnumIter};
+use strum::{AsRefStr, Display, EnumIter};
 
 use crate::fdw::base::OptionValidator;
 
 use super::utils;
 
-#[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[derive(EnumIter, AsRefStr, PartialEq, Debug, Display)]
 pub enum JsonOption {
     #[strum(serialize = "auto_detect")]
     AutoDetect,
@@ -66,4 +66,50 @@ impl OptionValidator for JsonOption {
             _ => false,
         };
     }
+}
+
+pub fn create_view(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+) -> Result<String> {
+    let files = Some(utils::format_csv(
+        table_options
+            .get(JsonOption::Files.as_ref())
+            .ok_or_else(|| anyhow!("files option is required"))?,
+    ));
+
+    let create_json_str = vec![
+        files,
+        extract_option(JsonOption::AutoDetect, &table_options),
+        extract_option(JsonOption::Columns, &table_options),
+        extract_option(JsonOption::Compression, &table_options),
+        extract_option(JsonOption::ConvertStringsToIntegers, &table_options),
+        extract_option(JsonOption::Dateformat, &table_options),
+        extract_option(JsonOption::Filename, &table_options),
+        extract_option(JsonOption::Format, &table_options),
+        extract_option(JsonOption::HivePartitioning, &table_options),
+        extract_option(JsonOption::IgnoreErrors, &table_options),
+        extract_option(JsonOption::IgnoreErrors, &table_options),
+        extract_option(JsonOption::MaximumDepth, &table_options),
+        extract_option(JsonOption::MaximumObjectSize, &table_options),
+        extract_option(JsonOption::Records, &table_options),
+        extract_option(JsonOption::SampleSize, &table_options),
+        extract_option(JsonOption::Timestampformat, &table_options),
+        extract_option(JsonOption::UnionByName, &table_options),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<String>>()
+    .join(", ");
+
+    let select = "*".to_string();
+
+    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_csv({create_json_str})"))
+}
+
+fn extract_option(option: JsonOption, table_options: &HashMap<String, String>) -> Option<String> {
+    return table_options
+        .get(option.as_ref())
+        .map(|res| format!("{option} = {res}"));
 }
