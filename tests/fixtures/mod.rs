@@ -55,16 +55,12 @@ use tokio::runtime::Runtime;
 
 #[fixture]
 pub fn database() -> Db {
-    block_on(async {
-        tracing::info!("Kom-0.1 conn !!!");
-        Db::new().await
-    })
+    block_on(async { Db::new().await })
 }
 
 #[fixture]
 pub fn conn(database: Db) -> PgConnection {
     block_on(async {
-        tracing::info!("Kom-0.2 conn !!!");
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")
             .execute(&mut conn)

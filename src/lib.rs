@@ -49,7 +49,6 @@ pub extern "C" fn _PG_init() {
         register_hook(&mut EXTENSION_HOOK)
     };
 
-    // GUCS.init("pg_analytics");
     pg_shmem_init!(env::DUCKDB_CONNECTION_CACHE);
 
     #[cfg(debug_assertions)]

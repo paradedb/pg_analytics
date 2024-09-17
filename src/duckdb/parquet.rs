@@ -127,8 +127,6 @@ pub fn create_duckdb_relation(
         .map(|s| s.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 
-    pgrx::warning!("pga:: parquet cache - {:#?}", cache);
-
     let relation = if cache { "TABLE" } else { "VIEW" };
 
     Ok(format!("CREATE {relation} IF NOT EXISTS {schema_name}.{table_name} AS SELECT * FROM read_parquet({create_parquet_str})"))
