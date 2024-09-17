@@ -228,6 +228,39 @@ sudo apt install libclang-dev
 sudo pacman -S extra/clang
 ```
 
+### Running the Extension
+
+First, start pgrx:
+
+```bash
+cargo pgrx run
+```
+
+This will launch an interactive connection to Postgres. Inside Postgres, create the extension by running:
+
+```sql
+CREATE EXTENSION pg_analytics;
+```
+
+Now, you have access to all the extension functions.
+
+### Modifying the Extension
+
+If you make changes to the extension code, follow these steps to update it:
+
+1. Recompile the extension:
+
+```bash
+cargo pgrx run
+```
+
+2. Recreate the extension to load the latest changes:
+
+```sql
+DROP EXTENSION pg_analytics;
+CREATE EXTENSION pg_analytics;
+```
+
 ### Running Tests
 
 We use `cargo test` as our runner for `pg_analytics` tests. Tests are conducted using [testcontainers](https://github.com/testcontainers/testcontainers-rs) to manage testing containers like [LocalStack](https://hub.docker.com/r/localstack/localstack). `testcontainers` will pull any Docker images that it requires to perform the test.
