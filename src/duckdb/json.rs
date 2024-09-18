@@ -53,6 +53,8 @@ pub enum JsonOption {
     Records,
     #[strum(serialize = "sample_size")]
     SampleSize,
+    #[strum(serialize = "select")]
+    Select,
     #[strum(serialize = "timestampformat")]
     Timestampformat,
     #[strum(serialize = "union_by_name")]
@@ -103,9 +105,10 @@ pub fn create_view(
     .collect::<Vec<String>>()
     .join(", ");
 
-    let select = "*".to_string();
+    let default_select = "*".to_string();
+    let select = extract_option(JsonOption::Select, &table_options).unwrap_or(default_select);
 
-    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_csv({create_json_str})"))
+    Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_json({create_json_str})"))
 }
 
 fn extract_option(option: JsonOption, table_options: &HashMap<String, String>) -> Option<String> {
