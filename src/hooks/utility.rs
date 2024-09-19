@@ -110,7 +110,7 @@ fn explain_query(
     }
 
     if unsafe { !(*stmt).options.is_null() } {
-        error!("No support explain options for DuckDB pushdown query.");
+        error!("the EXPLAIN options provided are not supported for DuckDB pushdown queries.");
     }
 
     unsafe {
