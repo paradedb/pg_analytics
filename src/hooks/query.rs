@@ -53,18 +53,11 @@ pub fn get_query_relations(rtable: *mut pg_sys::List) -> Vec<PgRelation> {
             return relations;
         }
 
-        #[cfg(feature = "pg12")]
-        let mut current_cell = (*rtable).head;
         #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
         let elements = (*rtable).elements;
 
         for i in 0..(*rtable).length {
             let rte: *mut pg_sys::RangeTblEntry;
-            #[cfg(feature = "pg12")]
-            {
-                rte = (*current_cell).data.ptr_value as *mut pg_sys::RangeTblEntry;
-                current_cell = (*current_cell).next;
-            }
             #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
             {
                 rte = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeTblEntry;
