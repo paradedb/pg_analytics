@@ -126,6 +126,17 @@ impl S3 {
         Ok(())
     }
 
+    /// Uploads a `RecordBatch` to the specified S3 bucket and key.
+    ///
+    /// # Arguments
+    ///
+    /// * `bucket` - The name of the S3 bucket.
+    /// * `key` - The key under which to store the batch.
+    /// * `batch` - The `RecordBatch` to upload.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the object cannot be written to S3.    
     #[allow(unused)]
     pub async fn put_batch(&self, bucket: &str, key: &str, batch: &RecordBatch) -> Result<()> {
         let mut buf = vec![];
@@ -143,6 +154,20 @@ impl S3 {
         Ok(())
     }
 
+    /// Fetches a `RecordBatch` from the specified S3 bucket and key.
+    ///
+    /// # Arguments
+    ///
+    /// * `bucket` - The name of the S3 bucket.
+    /// * `key` - The key where the batch is stored.
+    ///
+    /// # Returns
+    ///
+    /// Returns the `RecordBatch` if the object is successfully fetched and parsed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the object cannot be retrieved from S3 or if it cannot be parsed into a `RecordBatch`.
     #[allow(unused)]
     pub async fn get_batch(&self, bucket: &str, key: &str) -> Result<RecordBatch> {
         // Retrieve the object from S3
