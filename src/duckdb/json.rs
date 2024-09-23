@@ -83,22 +83,21 @@ pub fn create_view(
 
     let create_json_str = vec![
         files,
-        extract_option(JsonOption::AutoDetect, &table_options),
-        extract_option(JsonOption::Columns, &table_options),
-        extract_option(JsonOption::Compression, &table_options),
-        extract_option(JsonOption::ConvertStringsToIntegers, &table_options),
-        extract_option(JsonOption::Dateformat, &table_options),
-        extract_option(JsonOption::Filename, &table_options),
-        extract_option(JsonOption::Format, &table_options),
-        extract_option(JsonOption::HivePartitioning, &table_options),
-        extract_option(JsonOption::IgnoreErrors, &table_options),
-        extract_option(JsonOption::IgnoreErrors, &table_options),
-        extract_option(JsonOption::MaximumDepth, &table_options),
-        extract_option(JsonOption::MaximumObjectSize, &table_options),
-        extract_option(JsonOption::Records, &table_options),
-        extract_option(JsonOption::SampleSize, &table_options),
-        extract_option(JsonOption::Timestampformat, &table_options),
-        extract_option(JsonOption::UnionByName, &table_options),
+        extract_option(JsonOption::AutoDetect, &table_options, false),
+        extract_option(JsonOption::Columns, &table_options, false),
+        extract_option(JsonOption::Compression, &table_options, true),
+        extract_option(JsonOption::ConvertStringsToIntegers, &table_options, false),
+        extract_option(JsonOption::Dateformat, &table_options, true),
+        extract_option(JsonOption::Filename, &table_options, false),
+        extract_option(JsonOption::Format, &table_options, true),
+        extract_option(JsonOption::HivePartitioning, &table_options, false),
+        extract_option(JsonOption::IgnoreErrors, &table_options, false),
+        extract_option(JsonOption::MaximumDepth, &table_options, false),
+        extract_option(JsonOption::MaximumObjectSize, &table_options, false),
+        extract_option(JsonOption::Records, &table_options, false),
+        extract_option(JsonOption::SampleSize, &table_options, false),
+        extract_option(JsonOption::Timestampformat, &table_options, true),
+        extract_option(JsonOption::UnionByName, &table_options, false),
     ]
     .into_iter()
     .flatten()
@@ -106,13 +105,103 @@ pub fn create_view(
     .join(", ");
 
     let default_select = "*".to_string();
-    let select = extract_option(JsonOption::Select, &table_options).unwrap_or(default_select);
+    let select = table_options
+        .get(JsonOption::Select.as_ref())
+        .unwrap_or(&default_select);
 
     Ok(format!("CREATE VIEW IF NOT EXISTS {schema_name}.{table_name} AS SELECT {select} FROM read_json({create_json_str})"))
 }
 
-fn extract_option(option: JsonOption, table_options: &HashMap<String, String>) -> Option<String> {
-    return table_options
-        .get(option.as_ref())
-        .map(|res| format!("{option} = {res}"));
+fn extract_option(
+    option: JsonOption,
+    table_options: &HashMap<String, String>,
+    quote: bool,
+) -> Option<String> {
+    return table_options.get(option.as_ref()).map(|res| match quote {
+        true => format!("{option} = '{res}'"),
+        false => format!("{option} = {res}"),
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use duckdb::Connection;
+
+    #[test]
+    fn test_create_json_view_basic() {
+        let table_name = "json_test";
+        let schema_name = "main";
+        let table_options = HashMap::from([(
+            JsonOption::Files.as_ref().to_string(),
+            "/data/file1.json".to_string(),
+        )]);
+
+        let expected = "CREATE VIEW IF NOT EXISTS main.json_test AS SELECT * FROM read_json('/data/file1.json')";
+        let actual = create_view(table_name, schema_name, table_options).unwrap();
+
+        assert_eq!(expected, actual);
+
+        let conn = Connection::open_in_memory().unwrap();
+        match conn.prepare(&actual) {
+            Ok(_) => panic!("invalid json file should throw an error"),
+            Err(e) => assert!(e.to_string().contains("file1.json")),
+        }
+    }
+
+    #[test]
+    fn test_create_json_view_with_options() {
+        let table_name = "json_test";
+        let schema_name = "main";
+        let table_options = HashMap::from([
+            (
+                JsonOption::Files.to_string(),
+                "/data/file1.json, /data/file2.json".to_string(),
+            ),
+            (
+                JsonOption::Columns.to_string(),
+                "{'key1': 'INTEGER', 'key2': 'VARCHAR'}".to_string(),
+            ),
+            (
+                JsonOption::Compression.to_string(),
+                "uncompressed".to_string(),
+            ),
+            (
+                JsonOption::ConvertStringsToIntegers.to_string(),
+                "false".to_string(),
+            ),
+            (JsonOption::Dateformat.to_string(), "%d/%m/%Y".to_string()),
+            (JsonOption::Filename.to_string(), "true".to_string()),
+            (JsonOption::Format.to_string(), "array".to_string()),
+            (
+                JsonOption::HivePartitioning.to_string(),
+                "false".to_string(),
+            ),
+            (JsonOption::IgnoreErrors.to_string(), "true".to_string()),
+            (JsonOption::MaximumDepth.to_string(), "4096".to_string()),
+            (
+                JsonOption::MaximumObjectSize.to_string(),
+                "65536".to_string(),
+            ),
+            (JsonOption::Records.to_string(), "auto".to_string()),
+            (JsonOption::SampleSize.to_string(), "-1".to_string()),
+            (JsonOption::Select.to_string(), "key1".to_string()),
+            (
+                JsonOption::Timestampformat.to_string(),
+                "yyyy-MM-dd".to_string(),
+            ),
+            (JsonOption::UnionByName.to_string(), "true".to_string()),
+        ]);
+
+        let expected = "CREATE VIEW IF NOT EXISTS main.json_test AS SELECT key1 FROM read_json(['/data/file1.json', '/data/file2.json'])";
+        let actual = create_view(table_name, schema_name, table_options).unwrap();
+
+        assert_eq!(expected, actual);
+
+        let conn = Connection::open_in_memory().unwrap();
+        match conn.prepare(&actual) {
+            Ok(_) => panic!("invalid json file should throw an error"),
+            Err(e) => assert!(e.to_string().contains("file1.json")),
+        }
+    }
 }
