@@ -10,13 +10,13 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::runtime::Runtime;
 
-pub mod fixtures {
+pub mod pga_fixtures {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../tests/fixtures/mod.rs"
     ));
 }
-use fixtures::*;
+use pga_fixtures::*;
 
 use crate::tables::auto_sales::AutoSalesSimulator;
 use crate::tables::auto_sales::AutoSalesTestRunner;

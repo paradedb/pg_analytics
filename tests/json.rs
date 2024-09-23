@@ -29,9 +29,10 @@ use std::fs::File;
 use std::sync::Arc;
 use tempfile::TempDir;
 
-use crate::fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
-use crate::fixtures::db::Query;
-use crate::fixtures::{conn, tempdir};
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
+use crate::pga_fixtures::db::Query;
+use crate::pga_fixtures::{conn, tempdir};
 
 pub fn json_string_record_batch() -> Result<RecordBatch> {
     let fields = vec![

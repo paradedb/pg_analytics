@@ -25,7 +25,8 @@ use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::fixtures::*;
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::*;
 use crate::tables::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
 use datafusion::datasource::file_format::options::ParquetReadOptions;
 use datafusion::prelude::SessionContext;

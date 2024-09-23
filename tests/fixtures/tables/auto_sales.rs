@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use crate::fixtures::{db::Query, S3};
+use crate::pga_fixtures::{db::Query, S3};
 use anyhow::{Context, Result};
 use approx::assert_relative_eq;
 use datafusion::arrow::record_batch::RecordBatch;

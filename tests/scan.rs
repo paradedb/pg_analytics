@@ -17,14 +17,15 @@
 
 mod fixtures;
 
-use crate::fixtures::arrow::{
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
     primitive_setup_fdw_local_file_delta, primitive_setup_fdw_local_file_listing,
     primitive_setup_fdw_s3_delta, primitive_setup_fdw_s3_listing,
 };
-use crate::fixtures::db::Query;
-use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
+use crate::pga_fixtures::db::Query;
+use crate::pga_fixtures::{conn, duckdb_conn, s3, tempdir, S3};
 use anyhow::Result;
 use datafusion::parquet::arrow::ArrowWriter;
 use deltalake::operations::create::CreateBuilder;
@@ -39,8 +40,8 @@ use std::str::FromStr;
 use tempfile::TempDir;
 use time::macros::{date, datetime, time};
 
-use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
-use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use crate::pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
+use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";

@@ -19,7 +19,10 @@
 
 mod fixtures;
 
-use crate::fixtures::{arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query, tempdir};
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::{
+    arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query, tempdir,
+};
 use anyhow::Result;
 use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};

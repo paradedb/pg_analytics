@@ -17,12 +17,13 @@
 
 mod fixtures;
 
-use crate::fixtures::arrow::primitive_setup_fdw_local_file_listing;
-use crate::fixtures::db::Query;
-use crate::fixtures::duckdb_conn;
-use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
-use crate::fixtures::tables::nyc_trips::NycTripsTable;
-use crate::fixtures::{
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::arrow::primitive_setup_fdw_local_file_listing;
+use crate::pga_fixtures::db::Query;
+use crate::pga_fixtures::duckdb_conn;
+use crate::pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
+use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
+use crate::pga_fixtures::{
     conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
 };
 use anyhow::Result;

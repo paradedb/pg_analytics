@@ -17,13 +17,14 @@
 
 mod fixtures;
 
-use crate::fixtures::db::Query;
-use crate::fixtures::{conn, s3, S3};
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::db::Query;
+use crate::pga_fixtures::{conn, s3, S3};
 use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_BUCKET: &str = "test-trip-setup";
 const S3_KEY: &str = "test_trip_setup.parquet";

@@ -57,7 +57,7 @@ impl Db {
         let context = Arc::new(Mutex::new(context));
         Self { context }
     }
-    
+
     #[allow(clippy::await_holding_lock)]
     pub async fn connection(&self) -> PgConnection {
         let context = self.context.lock().unwrap();

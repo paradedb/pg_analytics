@@ -17,12 +17,13 @@
 
 mod fixtures;
 
-use crate::fixtures::arrow::{
+use crate::fixtures as pga_fixtures;
+use crate::pga_fixtures::arrow::{
     primitive_record_batch, primitive_setup_fdw_local_file_listing, record_batch_with_casing,
     setup_local_file_listing_with_casing,
 };
-use crate::fixtures::db::Query;
-use crate::fixtures::{conn, tempdir};
+use crate::pga_fixtures::db::Query;
+use crate::pga_fixtures::{conn, tempdir};
 use anyhow::Result;
 use datafusion::parquet::arrow::ArrowWriter;
 use rstest::*;
