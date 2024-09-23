@@ -48,7 +48,7 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] Delta Lake
 - [ ] JSON (Coming Soon)
 
-`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, and 16. Support for Postgres 12 and 13 is coming soon.
+`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, and 16. Support for Postgres 13 and 17 is coming soon.
 
 ## Installation
 
@@ -199,7 +199,7 @@ Then, install and initialize `pgrx`:
 
 ```bash
 # Note: Replace --pg16 with your version of Postgres, if different (i.e. --pg15, --pg14, etc.)
-cargo install --locked cargo-pgrx --version 0.12.1
+cargo install --locked cargo-pgrx --version 0.12.4
 
 # macOS arm64
 cargo pgrx init --pg16=/opt/homebrew/opt/postgresql@16/bin/pg_config
@@ -226,6 +226,39 @@ sudo apt install libclang-dev
 
 # Arch Linux
 sudo pacman -S extra/clang
+```
+
+### Running the Extension
+
+First, start pgrx:
+
+```bash
+cargo pgrx run
+```
+
+This will launch an interactive connection to Postgres. Inside Postgres, create the extension by running:
+
+```sql
+CREATE EXTENSION pg_analytics;
+```
+
+Now, you have access to all the extension functions.
+
+### Modifying the Extension
+
+If you make changes to the extension code, follow these steps to update it:
+
+1. Recompile the extension:
+
+```bash
+cargo pgrx run
+```
+
+2. Recreate the extension to load the latest changes:
+
+```sql
+DROP EXTENSION pg_analytics;
+CREATE EXTENSION pg_analytics;
 ```
 
 ### Running Tests

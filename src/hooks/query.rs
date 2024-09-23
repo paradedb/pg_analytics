@@ -21,6 +21,7 @@ use std::ffi::CStr;
 use std::str::Utf8Error;
 
 use crate::duckdb::connection;
+use crate::fdw::handler::FdwHandler;
 
 pub fn get_current_query(
     planned_stmt: *mut pg_sys::PlannedStmt,
@@ -44,28 +45,19 @@ pub fn get_current_query(
     Ok(current_query)
 }
 
-pub fn get_query_relations(planned_stmt: *mut pg_sys::PlannedStmt) -> Vec<PgRelation> {
+pub fn get_query_relations(rtable: *mut pg_sys::List) -> Vec<PgRelation> {
     let mut relations = Vec::new();
 
     unsafe {
-        let rtable = (*planned_stmt).rtable;
-
         if rtable.is_null() {
             return relations;
         }
 
-        #[cfg(feature = "pg12")]
-        let mut current_cell = (*rtable).head;
         #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
         let elements = (*rtable).elements;
 
         for i in 0..(*rtable).length {
             let rte: *mut pg_sys::RangeTblEntry;
-            #[cfg(feature = "pg12")]
-            {
-                rte = (*current_cell).data.ptr_value as *mut pg_sys::RangeTblEntry;
-                current_cell = (*current_cell).next;
-            }
             #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
             {
                 rte = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeTblEntry;
@@ -119,4 +111,18 @@ fn get_postgres_search_path() -> Vec<String> {
     }
 
     schema_vec
+}
+
+pub fn is_duckdb_query(relations: &[PgRelation]) -> bool {
+    !relations.is_empty()
+        && relations.iter().all(|pg_relation| {
+            if pg_relation.is_foreign_table() {
+                let foreign_table = unsafe { pg_sys::GetForeignTable(pg_relation.oid()) };
+                let foreign_server = unsafe { pg_sys::GetForeignServer((*foreign_table).serverid) };
+                let fdw_handler = FdwHandler::from(foreign_server);
+                fdw_handler != FdwHandler::Other
+            } else {
+                false
+            }
+        })
 }
