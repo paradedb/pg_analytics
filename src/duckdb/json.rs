@@ -193,7 +193,7 @@ mod tests {
             (JsonOption::UnionByName.to_string(), "true".to_string()),
         ]);
 
-        let expected = "CREATE VIEW IF NOT EXISTS main.json_test AS SELECT key1 FROM read_json(['/data/file1.json', '/data/file2.json'])";
+        let expected = "CREATE VIEW IF NOT EXISTS main.json_test AS SELECT key1 FROM read_json(['/data/file1.json', '/data/file2.json'], columns = {'key1': 'INTEGER', 'key2': 'VARCHAR'}, compression = 'uncompressed', convert_strings_to_integers = false, dateformat = '%d/%m/%Y', filename = true, format = 'array', hive_partitioning = false, ignore_errors = true, maximum_depth = 4096, maximum_object_size = 65536, records = auto, sample_size = -1, timestampformat = 'yyyy-MM-dd', union_by_name = true)";
         let actual = create_view(table_name, schema_name, table_options).unwrap();
 
         assert_eq!(expected, actual);
