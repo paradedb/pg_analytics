@@ -63,10 +63,7 @@ pub enum JsonOption {
 
 impl OptionValidator for JsonOption {
     fn is_required(&self) -> bool {
-        return match self {
-            Self::Files => true,
-            _ => false,
-        };
+        matches!(self, Self::Files)
     }
 }
 
