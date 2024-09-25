@@ -26,8 +26,12 @@ use anyhow::{bail, Result};
 use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
+use crate::duckdb::connection::execute;
 use explain::explain_query;
+use pgrx::pg_sys::NodeTag;
 use prepare::*;
+
+use super::query::*;
 
 type ProcessUtilityHook = fn(
     pstmt: PgBox<pg_sys::PlannedStmt>,
@@ -114,6 +118,7 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
+        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -133,11 +138,19 @@ pub async fn process_utility_hook(
     Ok(())
 }
 
-fn is_support_utility(stmt_type: pg_sys::NodeTag) -> bool {
+fn is_support_utility(stmt_type: NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
-        || stmt_type == pg_sys::NodeTag::T_PrepareStmt
+        || stmt_type == pg_sys::NodeTag::T_ViewStmt
         || stmt_type == pg_sys::NodeTag::T_DeallocateStmt
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
+}
+
+fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
+    // Set DuckDB search path according search path in Postgres
+    set_search_path_by_pg()?;
+    // Push down the view creation query to DuckDB
+    execute(query_string.to_str().unwrap(), [])?;
+    Ok(true)
 }
 
 fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<String> {
