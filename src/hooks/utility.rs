@@ -149,7 +149,7 @@ fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
     // Set DuckDB search path according search path in Postgres
     set_search_path_by_pg()?;
     // Push down the view creation query to DuckDB
-    execute(query_string.to_str().unwrap(), [])?;
+    execute(query_string.to_str()?, [])?;
     Ok(true)
 }
 
