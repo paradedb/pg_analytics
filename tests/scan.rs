@@ -577,7 +577,7 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
     )
     .execute(&mut conn);
 
-    "CREATE VIEW trips_view AS SELECT * FROM trips".execute(&mut conn);
+    "CREATE VIEW trips_view AS SELECT COUNT(*) FROM trips".execute(&mut conn);
     let res: (i64,) = "SELECT * FROM trips_view".fetch_one(&mut conn);
 
     assert_eq!(res.0, 2964624);
