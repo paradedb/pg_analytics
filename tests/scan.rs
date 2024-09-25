@@ -559,9 +559,9 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     Ok(())
 }
 
-// Test view creation with foreign table
+
 #[rstest]
-async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
     let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
     s3.client
@@ -647,30 +647,41 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
 
     "DEALLOCATE q1".execute(&mut conn);
     assert!("EXECUTE q1(true)".execute_result(&mut conn).is_err());
+
     Ok(())
 }
 
+// Test view creation with foreign table
 #[rstest]
-async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
-    NycTripsTable::setup().execute(&mut conn);
-    let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
-    s3.client
-        .create_bucket()
-        .bucket(S3_TRIPS_BUCKET)
-        .send()
-        .await?;
-    s3.create_bucket(S3_TRIPS_BUCKET).await?;
-    s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
+async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
 
-    NycTripsTable::setup_s3_listing_fdw(
-        &s3.url.clone(),
-        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
-    )
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "primitive")
+        .execute(&mut conn);
+
+    // fully pushdown to the DuckDB
+    "CREATE VIEW primitive_view AS SELECT * FROM primitive".execute(&mut conn);
+    let res: (bool,) = "SELECT boolean_col FROM primitive_view".fetch_one(&mut conn);
+    assert!(res.0);
+
+    // cannot fully pushdown to the DuckDB
+    "CREATE TABLE t1 (a int);".execute(&mut conn);
+    "INSERT INTO t1 VALUES (1);".execute(&mut conn);
+    r#"
+    CREATE VIEW primitive_join_view AS
+    SELECT *
+    FROM primitive
+    JOIN t1 ON t1.a = primitive.int32_col
+    "#
     .execute(&mut conn);
-    "CREATE VIEW trips_view AS SELECT * FROM trips".execute(&mut conn);
-    let res: (i64,) = "SELECT * FROM trips_view".fetch_one(&mut conn);
 
-    assert_eq!(res.0, 2964624);
-
+    let res: (i32,) = "SELECT int32_col FROM primitive_join_view".fetch_one(&mut conn);
+    assert_eq!(res.0, 1);
     Ok(())
 }
