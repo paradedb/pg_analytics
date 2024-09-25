@@ -40,6 +40,9 @@ jobs:
       matrix:
         include:
           - runner: depot-ubuntu-latest-16
+            pg_version: 13
+            arch: amd64
+          - runner: depot-ubuntu-latest-16
             pg_version: 14
             arch: amd64
           - runner: depot-ubuntu-latest-16
