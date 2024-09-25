@@ -560,7 +560,7 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
 }
 
 #[rstest]
-async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
     let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
     s3.client
@@ -646,6 +646,30 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
 
     "DEALLOCATE q1".execute(&mut conn);
     assert!("EXECUTE q1(true)".execute_result(&mut conn).is_err());
+    Ok(())
+}
+
+#[rstest]
+async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+    NycTripsTable::setup().execute(&mut conn);
+    let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
+    s3.client
+        .create_bucket()
+        .bucket(S3_TRIPS_BUCKET)
+        .send()
+        .await?;
+    s3.create_bucket(S3_TRIPS_BUCKET).await?;
+    s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
+
+    NycTripsTable::setup_s3_listing_fdw(
+        &s3.url.clone(),
+        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
+    )
+    .execute(&mut conn);
+    "CREATE VIEW trips_view AS SELECT * FROM trips".execute(&mut conn);
+    let res: (i64,) = "SELECT * FROM trips_view".fetch_one(&mut conn);
+
+    assert_eq!(res.0, 2964624);
 
     Ok(())
 }
