@@ -24,6 +24,8 @@ use pg_sys::NodeTag;
 use pgrx::*;
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
+use crate::duckdb::connection::execute;
+
 use super::query::*;
 
 #[allow(deprecated)]
@@ -72,6 +74,7 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
+        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -92,7 +95,15 @@ pub async fn process_utility_hook(
 }
 
 fn is_support_utility(stmt_type: NodeTag) -> bool {
-    stmt_type == pg_sys::NodeTag::T_ExplainStmt
+    stmt_type == pg_sys::NodeTag::T_ExplainStmt || stmt_type == pg_sys::NodeTag::T_ViewStmt
+}
+
+fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
+    // Set DuckDB search path according search path in Postgres
+    set_search_path_by_pg()?;
+    // Push down the view creation query to DuckDB
+    execute(query_string.to_str().unwrap(), [])?;
+    Ok(true)
 }
 
 fn explain_query(
