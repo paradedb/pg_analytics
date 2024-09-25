@@ -559,6 +559,7 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     Ok(())
 }
 
+// Test view creation with foreign table
 #[rstest]
 async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
