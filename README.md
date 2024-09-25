@@ -46,7 +46,7 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] CSV
 - [x] Apache Iceberg
 - [x] Delta Lake
-- [ ] JSON (Coming Soon)
+- [x] JSON
 
 `pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, and 16. Support for Postgres 13 and 17 is coming soon.
 

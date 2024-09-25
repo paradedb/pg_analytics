@@ -19,6 +19,7 @@ pub mod connection;
 pub mod csv;
 pub mod delta;
 pub mod iceberg;
+pub mod json;
 pub mod parquet;
 pub mod secret;
 pub mod spatial;
