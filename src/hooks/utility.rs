@@ -20,13 +20,14 @@
 mod explain;
 mod prepare;
 
+use std::ffi::CStr;
 use std::ptr::null_mut;
 
 use anyhow::{bail, Result};
 use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
-use crate::duckdb::connection::execute;
+use crate::duckdb::connection::{execute, view_exists};
 use explain::explain_query;
 use pgrx::pg_sys::NodeTag;
 use prepare::*;
@@ -118,7 +119,9 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
-        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
+        pg_sys::NodeTag::T_ViewStmt => {
+            view_query(query_string, pstmt.utilityStmt as *mut pg_sys::ViewStmt)?
+        }
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -145,9 +148,38 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
 }
 
-fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
+fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
+    // Get the current schema in Postgres
+    let current_schema = get_postgres_current_schema();
     // Set DuckDB search path according search path in Postgres
     set_search_path_by_pg()?;
+
+    let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
+    let from_clause = unsafe { (*query).fromClause };
+    unsafe {
+        let elements: *mut pg_sys::ListCell = (*from_clause).elements;
+        for i in 0..(*from_clause).length {
+            let rv = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeVar;
+
+            // if the schema name is not provided, the current schema is used
+            let relation_name = if (*rv).relname.is_null() {
+                current_schema.as_str()
+            } else {
+                CStr::from_ptr((*rv).relname).to_str()?
+            };
+            let schema_name = if (*rv).schemaname.is_null() {
+                current_schema.as_str()
+            } else {
+                CStr::from_ptr((*rv).schemaname).to_str()?
+            };
+
+            if !view_exists(relation_name, schema_name)? {
+                pgrx::warning!("{schema_name}.{relation_name} does not exist in DuckDB, this query won't be pushed down to DuckDB.");
+                return Ok(true);
+            }
+        }
+    }
+
     // Push down the view creation query to DuckDB
     execute(query_string.to_str()?, [])?;
     Ok(true)
