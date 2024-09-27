@@ -27,7 +27,7 @@ use anyhow::{bail, Result};
 use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
-use crate::duckdb::connection::{execute, view_exists};
+use crate::duckdb::connection::{execute};
 use explain::explain_query;
 use pgrx::pg_sys::NodeTag;
 use prepare::*;
@@ -157,25 +157,30 @@ fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Re
     let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
     let from_clause = unsafe { (*query).fromClause };
     unsafe {
-        let elements: *mut pg_sys::ListCell = (*from_clause).elements;
+        let elements = (*from_clause).elements;
         for i in 0..(*from_clause).length {
-            let rv = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeVar;
+            let element = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::Node;
 
-            // if the schema name is not provided, the current schema is used
-            let relation_name = if (*rv).relname.is_null() {
-                current_schema.as_str()
-            } else {
-                CStr::from_ptr((*rv).relname).to_str()?
-            };
-            let schema_name = if (*rv).schemaname.is_null() {
-                current_schema.as_str()
-            } else {
-                CStr::from_ptr((*rv).schemaname).to_str()?
-            };
-
-            if !view_exists(relation_name, schema_name)? {
-                pgrx::warning!("{schema_name}.{relation_name} does not exist in DuckDB, this query won't be pushed down to DuckDB.");
-                return Ok(true);
+            match (*element).type_ {
+                pg_sys::NodeTag::T_RangeVar => {
+                    if !analyze_range_var(
+                        element as *mut pg_sys::RangeVar,
+                        current_schema.as_str(),
+                    )? {
+                        return Ok(true);
+                    }
+                }
+                pg_sys::NodeTag::T_JoinExpr => {
+                    if !analyze_join_expr(
+                        element as *mut pg_sys::JoinExpr,
+                        current_schema.as_str(),
+                    )? {
+                        return Ok(true);
+                    }
+                }
+                _ => {
+                    continue;
+                }
             }
         }
     }
