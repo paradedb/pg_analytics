@@ -24,13 +24,13 @@ duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "bundled",
   "extensions-full",
 ], rev = "e532dd6" }
-pgrx = "0.12.4"
+pgrx = "0.12.5"
 serde = "1.0.210"
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
 sqlparser = "0.50.0"
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "19d6132" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "2b39e42" }
 thiserror = "1.0.63"
 uuid = "1.10.0"
 
@@ -42,7 +42,7 @@ bytes = "1.7.1"
 datafusion = "37.1.0"
 deltalake = { version = "0.17.3", features = ["datafusion"] }
 futures = "0.3.30"
-pgrx-tests = "0.12.4"
+pgrx-tests = "0.12.5"
 rstest = "0.19.0"
 serde_arrow = { version = "0.11.7", features = ["arrow-51"] }
 soa_derive = "0.13.0"
