@@ -24,7 +24,10 @@ use pg_sys::NodeTag;
 use pgrx::*;
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
-use crate::duckdb::connection::{execute, view_exists};
+use crate::{
+    duckdb::connection::{execute, view_exists},
+    fallback_warning,
+};
 
 use super::query::*;
 
@@ -109,31 +112,85 @@ fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Re
     let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
     let from_clause = unsafe { (*query).fromClause };
     unsafe {
-        let elements: *mut pg_sys::ListCell = (*from_clause).elements;
+        let elements = (*from_clause).elements;
         for i in 0..(*from_clause).length {
-            let rv = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeVar;
+            let element = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::Node;
 
-            // if the schema name is not provided, the current schema is used
-            let relation_name = if (*rv).relname.is_null() {
-                current_schema.as_str()
-            } else {
-                CStr::from_ptr((*rv).relname).to_str()?
-            };
-            let schema_name = if (*rv).schemaname.is_null() {
-                current_schema.as_str()
-            } else {
-                CStr::from_ptr((*rv).schemaname).to_str()?
-            };
-
-            if !view_exists(relation_name, schema_name)? {
-                pgrx::warning!("{schema_name}.{relation_name} does not exist in DuckDB, this query won't be pushed down to DuckDB.");
-                return Ok(true);
+            match (*element).type_ {
+                pg_sys::NodeTag::T_RangeVar => {
+                    if !analyze_range_var(
+                        element as *mut pg_sys::RangeVar,
+                        current_schema.as_str(),
+                    )? {
+                        return Ok(true);
+                    }
+                }
+                pg_sys::NodeTag::T_JoinExpr => {
+                    if !analyze_join_expr(
+                        element as *mut pg_sys::JoinExpr,
+                        current_schema.as_str(),
+                    )? {
+                        return Ok(true);
+                    }
+                }
+                _ => {
+                    continue;
+                }
             }
         }
     }
 
     // Push down the view creation query to DuckDB
     execute(query_string.to_str()?, [])?;
+    Ok(true)
+}
+
+/// Analyze the RangeVar to check if the relation exists in DuckDB
+fn analyze_range_var(rv: *mut pg_sys::RangeVar, current_schema: &str) -> Result<bool> {
+    let relation_name = unsafe { CStr::from_ptr((*rv).relname).to_str()? };
+    let schema_name = unsafe {
+        if (*rv).schemaname.is_null() {
+            current_schema
+        } else {
+            CStr::from_ptr((*rv).schemaname).to_str()?
+        }
+    };
+
+    if !view_exists(relation_name, schema_name)? {
+        fallback_warning!(format!(
+            "{schema_name}.{relation_name} does not exist in DuckDB"
+        ));
+        Ok(false)
+    } else {
+        Ok(true)
+    }
+}
+
+/// Analyze the join expression to check if the relations in the join expression exist in DuckDB
+fn analyze_join_expr(join_expr: *mut pg_sys::JoinExpr, current_schema: &str) -> Result<bool> {
+    unsafe {
+        let ltree = (*join_expr).larg;
+        let rtree = (*join_expr).rarg;
+
+        Ok(analyze_tree(ltree, current_schema)? && analyze_tree(rtree, current_schema)?)
+    }
+}
+
+/// Analyze the tree to check if the relations in the tree exist in DuckDB
+fn analyze_tree(mut tree: *mut pg_sys::Node, current_schema: &str) -> Result<bool> {
+    while !tree.is_null() {
+        unsafe {
+            match (*tree).type_ {
+                pg_sys::NodeTag::T_RangeVar => {
+                    return analyze_range_var(tree as *mut pg_sys::RangeVar, current_schema);
+                }
+                pg_sys::NodeTag::T_JoinExpr => {
+                    tree = (*(tree as *mut pg_sys::JoinExpr)).larg;
+                }
+                _ => break,
+            }
+        }
+    }
     Ok(true)
 }
 

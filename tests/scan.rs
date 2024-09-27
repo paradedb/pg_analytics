@@ -561,6 +561,7 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
 // Test view creation with foreign table
 #[rstest]
 async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+    // fully pushdown to DuckDB
     NycTripsTable::setup().execute(&mut conn);
     let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
     s3.client
@@ -582,5 +583,30 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
 
     assert_eq!(res.0, 2964624);
 
+    // cannot fully pushdown to DuckDB
+    let warning_res: (String,) = "CREATE TABLE rate_code (
+    id INT PRIMARY KEY,
+    name TEXT
+    );
+
+    INSERT INTO rate_code
+    (id, name)
+    VALUES
+    (1, 'one'),
+    (2, 'two'),
+    (3, 'three'),
+    (4, 'four'),
+    (5, 'five'),
+    (99, 'ninety nine');
+
+    create view trips_with_rate_code as
+    select *
+    from trips
+    join rate_code
+    on trips.ratecodeid = rate_code.id;
+    "
+    .fetch_one(&mut conn);
+
+    assert_eq!(warning_res.0, "");
     Ok(())
 }
