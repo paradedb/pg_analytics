@@ -583,15 +583,6 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
 
     assert_eq!(res.0, 100);
 
-    let test: Vec<(String,)> = r#"
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_name = 'trips';
-        "#
-    .fetch(&mut conn);
-
-    panic!("{:?}", test);
-
     // cannot fully pushdown to DuckDB
     r#"
     CREATE TABLE rate_code (
@@ -616,7 +607,7 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
     select *
     from trips
     join rate_code
-    on trips.vendorid = rate_code.id;
+    on trips.VendorID = rate_code.id;
     "#
     .execute_result(&mut conn);
 
