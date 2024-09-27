@@ -591,6 +591,15 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
 
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
 
+    let test: Vec<(String,)> = r#"
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'trips';
+        "#
+    .fetch(&mut conn);
+
+    panic!("{:?}", test);
+
     // cannot fully pushdown to DuckDB
     r#"
     CREATE TABLE rate_code (
@@ -622,7 +631,7 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     if let Err(e) = warning_res {
         assert_eq!(
             e.to_string(),
-            "WARNING: publicrate_code does not exist in DuckDB".to_string()
+            "WARNING: public.rate_code does not exist in DuckDB".to_string()
         );
     } else {
         panic!("Expecting an warning but got success");
