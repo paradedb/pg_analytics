@@ -581,10 +581,11 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
     "CREATE VIEW trips_view AS SELECT COUNT(*) FROM trips".execute(&mut conn);
     let res: (i64,) = "SELECT * FROM trips_view".fetch_one(&mut conn);
 
-    assert_eq!(res.0, 2964624);
+    assert_eq!(res.0, 100);
 
     // cannot fully pushdown to DuckDB
-    let warning_res: (String,) = "CREATE TABLE rate_code (
+    r#"
+    CREATE TABLE rate_code (
     id INT PRIMARY KEY,
     name TEXT
     );
@@ -598,15 +599,25 @@ async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) 
     (4, 'four'),
     (5, 'five'),
     (99, 'ninety nine');
+    "#
+    .execute(&mut conn);
 
+    let warning_res = r#"
     create view trips_with_rate_code as
     select *
     from trips
     join rate_code
-    on trips.ratecodeid = rate_code.id;
-    "
-    .fetch_one(&mut conn);
+    on trips.vendorid = rate_code.id;
+    "#
+    .execute_result(&mut conn);
 
-    assert_eq!(warning_res.0, "");
+    if let Err(e) = warning_res {
+        assert_eq!(
+            e.to_string(),
+            "WARNING: publicrate_code does not exist in DuckDB".to_string()
+        );
+    } else {
+        panic!("Expecting an warning but got success");
+    }
     Ok(())
 }
