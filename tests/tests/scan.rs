@@ -591,6 +591,31 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
 
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
 
+    // cannot fully pushdown to DuckDB
+    let warning_res: (String,) = "CREATE TABLE rate_code (
+    id INT PRIMARY KEY,
+    name TEXT
+    );
+
+    INSERT INTO rate_code
+    (id, name)
+    VALUES
+    (1, 'one'),
+    (2, 'two'),
+    (3, 'three'),
+    (4, 'four'),
+    (5, 'five'),
+    (99, 'ninety nine');
+
+    create view trips_with_rate_code as
+    select *
+    from trips
+    join rate_code
+    on trips.ratecodeid = rate_code.id;
+    "
+    .fetch_one(&mut conn);
+
+    assert_eq!(warning_res.0, "");
     Ok(())
 }
 
