@@ -592,7 +592,8 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
 
     // cannot fully pushdown to DuckDB
-    let warning_res: (String,) = "CREATE TABLE rate_code (
+    r#"
+    CREATE TABLE rate_code (
     id INT PRIMARY KEY,
     name TEXT
     );
@@ -606,16 +607,26 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     (4, 'four'),
     (5, 'five'),
     (99, 'ninety nine');
+    "#
+    .execute(&mut conn);
 
+    let warning_res = r#"
     create view trips_with_rate_code as
     select *
     from trips
     join rate_code
-    on trips.ratecodeid = rate_code.id;
-    "
-    .fetch_one(&mut conn);
+    on trips.vendorid = rate_code.id;
+    "#
+    .execute_result(&mut conn);
 
-    assert_eq!(warning_res.0, "");
+    if let Err(e) = warning_res {
+        assert_eq!(
+            e.to_string(),
+            "WARNING: publicrate_code does not exist in DuckDB".to_string()
+        );
+    } else {
+        panic!("Expecting an warning but got success");
+    }
     Ok(())
 }
 
