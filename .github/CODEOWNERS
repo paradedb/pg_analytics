@@ -3,6 +3,6 @@
 /.cargo/                                                       @philippemnoel @rebasedming
 /.github/                                                      @philippemnoel @rebasedming
 /assets/                                                       @philippemnoel @rebasedming
-/cargo-paradedb/                                               @neilyio @rebasedming
+/sql/                                                          @philippemnoel @rebasedming
 /src/                                                          @rebasedming @philippemnoel
 /tests/                                                        @rebasedming @neilyio
