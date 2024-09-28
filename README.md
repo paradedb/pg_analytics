@@ -198,7 +198,7 @@ export PATH="$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin"
 Then, install and initialize `pgrx`:
 
 ```bash
-# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg15, --pg14, etc.)
+# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg16, --pg15, --pg14, etc.)
 cargo install --locked cargo-pgrx --version 0.12.5
 
 # macOS arm64
