@@ -48,7 +48,7 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] Delta Lake
 - [x] JSON
 
-`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, and 16. Support for Postgres 13 and 17 is coming soon.
+`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, 16 and 17. Support for Postgres 13 is coming soon.
 
 ## Installation
 
@@ -85,7 +85,7 @@ This ensures the best query performance from the extension .
 
 #### Debian/Ubuntu
 
-We provide prebuilt binaries for Debian-based Linux for Postgres 16, 15 and 14. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
+We provide prebuilt binaries for Debian-based Linux for Postgres 17, 16, 15 and 14. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
 
 ParadeDB collects anonymous telemetry to help us understand how many people are using the project. You can opt out of telemetry by setting `export PARADEDB_TELEMETRY=false` (or unsetting the variable) in your shell or in your `~/.bashrc` file before running the extension.
 
@@ -176,12 +176,12 @@ sudo pacman -S core/openssl
 
 ```bash
 # macOS
-brew install postgresql@16
+brew install postgresql@17
 
 # Ubuntu
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-sudo apt-get update && sudo apt-get install -y postgresql-16 postgresql-server-dev-16
+sudo apt-get update && sudo apt-get install -y postgresql-17 postgresql-server-dev-17
 
 # Arch Linux
 sudo pacman -S extra/postgresql
@@ -198,20 +198,20 @@ export PATH="$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin"
 Then, install and initialize `pgrx`:
 
 ```bash
-# Note: Replace --pg16 with your version of Postgres, if different (i.e. --pg15, --pg14, etc.)
+# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg15, --pg14, etc.)
 cargo install --locked cargo-pgrx --version 0.12.5
 
 # macOS arm64
-cargo pgrx init --pg16=/opt/homebrew/opt/postgresql@16/bin/pg_config
+cargo pgrx init --pg17=/opt/homebrew/opt/postgresql@17/bin/pg_config
 
 # macOS amd64
-cargo pgrx init --pg16=/usr/local/opt/postgresql@16/bin/pg_config
+cargo pgrx init --pg17=/usr/local/opt/postgresql@17/bin/pg_config
 
 # Ubuntu
-cargo pgrx init --pg16=/usr/lib/postgresql/16/bin/pg_config
+cargo pgrx init --pg17=/usr/lib/postgresql/17/bin/pg_config
 
 # Arch Linux
-cargo pgrx init --pg16=/usr/bin/pg_config
+cargo pgrx init --pg17=/usr/bin/pg_config
 ```
 
 If you prefer to use a different version of Postgres, update the `--pg` flag accordingly.

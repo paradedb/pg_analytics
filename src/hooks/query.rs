@@ -53,15 +53,10 @@ pub fn get_query_relations(rtable: *mut pg_sys::List) -> Vec<PgRelation> {
             return relations;
         }
 
-        #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
         let elements = (*rtable).elements;
 
         for i in 0..(*rtable).length {
-            let rte: *mut pg_sys::RangeTblEntry;
-            #[cfg(any(feature = "pg13", feature = "pg14", feature = "pg15", feature = "pg16"))]
-            {
-                rte = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeTblEntry;
-            }
+            let rte = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::RangeTblEntry;
 
             if (*rte).rtekind != pg_sys::RTEKind::RTE_RELATION {
                 continue;
