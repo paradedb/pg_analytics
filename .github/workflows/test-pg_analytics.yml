@@ -48,8 +48,11 @@ jobs:
           - runner: depot-ubuntu-latest-16
             pg_version: 16
             arch: amd64
+          - runner: depot-ubuntu-latest-16
+            pg_version: 17
+            arch: amd64
     env:
-      default_pg_version: 16
+      default_pg_version: 17
 
     steps:
       # For the Rust cache to get filled, we need to run the CI on the dev branch after every merge. This only

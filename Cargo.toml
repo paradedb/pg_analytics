@@ -9,11 +9,12 @@ license = "AGPL-3.0"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["pg16"]
-pg13 = ["pgrx/pg13", "pgrx-tests/pg13"]
-pg14 = ["pgrx/pg14", "pgrx-tests/pg14"]
-pg15 = ["pgrx/pg15", "pgrx-tests/pg15"]
-pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
+default = ["pg17"]
+pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13"]
+pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
+pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
+pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
+pg17 = ["pgrx/pg17", "pgrx-tests/pg17", "supabase-wrappers/pg17"]
 pg_test = []
 
 [dependencies]
@@ -30,7 +31,7 @@ serde_json = "1.0.128"
 signal-hook = "0.3.17"
 sqlparser = "0.50.0"
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "2b39e42" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "c32abb7" }
 thiserror = "1.0.63"
 uuid = "1.10.0"
 
