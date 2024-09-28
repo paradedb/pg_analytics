@@ -15,21 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod fixtures;
-
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::arrow::{
+use anyhow::Result;
+use datafusion::parquet::arrow::ArrowWriter;
+use deltalake::operations::create::CreateBuilder;
+use deltalake::writer::{DeltaWriter, RecordBatchWriter};
+use pga_fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
     primitive_setup_fdw_local_file_delta, primitive_setup_fdw_local_file_listing,
     primitive_setup_fdw_s3_delta, primitive_setup_fdw_s3_listing,
 };
-use crate::pga_fixtures::db::Query;
-use crate::pga_fixtures::{conn, duckdb_conn, s3, tempdir, S3};
-use anyhow::Result;
-use datafusion::parquet::arrow::ArrowWriter;
-use deltalake::operations::create::CreateBuilder;
-use deltalake::writer::{DeltaWriter, RecordBatchWriter};
+use pga_fixtures::db::Query;
+use pga_fixtures::{conn, duckdb_conn, s3, tempdir, S3};
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
 use sqlx::types::{BigDecimal, Json, Uuid};
@@ -40,8 +37,8 @@ use std::str::FromStr;
 use tempfile::TempDir;
 use time::macros::{date, datetime, time};
 
-use crate::pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
-use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
+use pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
+use pga_fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_TRIPS_BUCKET: &str = "test-trip-setup";
 const S3_TRIPS_KEY: &str = "test_trip_setup.parquet";

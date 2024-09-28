@@ -49,8 +49,8 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::{localstack::LocalStack, testcontainers::ImageExt};
 
-use pga_fixtures::db::*;
-use pga_fixtures::tables::nyc_trips::NycTripsTable;
+use crate::db::*;
+use crate::tables::nyc_trips::NycTripsTable;
 use tokio::runtime::Runtime;
 
 #[fixture]

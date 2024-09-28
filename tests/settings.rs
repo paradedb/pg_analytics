@@ -1,9 +1,6 @@
-mod fixtures;
-
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::conn;
-use crate::pga_fixtures::db::Query;
 use anyhow::Result;
+use pga_fixtures::conn;
+use pga_fixtures::db::Query;
 use rstest::*;
 use sqlx::PgConnection;
 

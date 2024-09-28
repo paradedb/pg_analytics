@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod fixtures;
-
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,11 +23,10 @@ use anyhow::Result;
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::*;
 use crate::tables::auto_sales::{AutoSalesSimulator, AutoSalesTestRunner};
 use datafusion::datasource::file_format::options::ParquetReadOptions;
 use datafusion::prelude::SessionContext;
+use pga_fixtures::*;
 
 #[fixture]
 fn parquet_path() -> PathBuf {

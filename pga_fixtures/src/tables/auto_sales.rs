@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use crate::{db::Query, S3};
 use anyhow::{Context, Result};
 use approx::assert_relative_eq;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::dataframe::DataFrame;
 use datafusion::prelude::*;
-use pga_fixtures::{db::Query, S3};
 use rand::prelude::*;
 use rand::Rng;
 use serde::{Deserialize, Serialize};

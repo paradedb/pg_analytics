@@ -15,16 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod fixtures;
-
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::db::Query;
-use crate::pga_fixtures::{conn, s3, S3};
 use anyhow::Result;
+use pga_fixtures::db::Query;
+use pga_fixtures::{conn, s3, S3};
 use rstest::*;
 use sqlx::PgConnection;
 
-use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
+use pga_fixtures::tables::nyc_trips::NycTripsTable;
 
 const S3_BUCKET: &str = "test-trip-setup";
 const S3_KEY: &str = "test_trip_setup.parquet";

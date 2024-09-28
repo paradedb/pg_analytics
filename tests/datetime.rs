@@ -15,20 +15,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod fixtures;
-
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::arrow::primitive_setup_fdw_local_file_listing;
-use crate::pga_fixtures::db::Query;
-use crate::pga_fixtures::duckdb_conn;
-use crate::pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
-use crate::pga_fixtures::tables::nyc_trips::NycTripsTable;
-use crate::pga_fixtures::{
-    conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
-};
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use datafusion::parquet::arrow::ArrowWriter;
+use pga_fixtures::arrow::primitive_setup_fdw_local_file_listing;
+use pga_fixtures::db::Query;
+use pga_fixtures::duckdb_conn;
+use pga_fixtures::tables::duckdb_types::DuckdbTypesTable;
+use pga_fixtures::tables::nyc_trips::NycTripsTable;
+use pga_fixtures::{
+    conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
+};
 use rstest::*;
 use sqlx::types::BigDecimal;
 use sqlx::PgConnection;

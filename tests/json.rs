@@ -15,8 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-mod fixtures;
-
 use anyhow::Result;
 use datafusion::arrow::array::{LargeStringArray, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
@@ -29,10 +27,9 @@ use std::fs::File;
 use std::sync::Arc;
 use tempfile::TempDir;
 
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
-use crate::pga_fixtures::db::Query;
-use crate::pga_fixtures::{conn, tempdir};
+use pga_fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
+use pga_fixtures::db::Query;
+use pga_fixtures::{conn, tempdir};
 
 pub fn json_string_record_batch() -> Result<RecordBatch> {
     let fields = vec![

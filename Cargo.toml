@@ -9,7 +9,7 @@ license = "AGPL-3.0"
 crate-type = ["cdylib", "rlib"]
 
 [workspace]
-members = [".", "pg_analytics_benches"]
+members = [".", "pga_fixtures"]
 
 [features]
 default = ["pg16"]
@@ -70,6 +70,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "time"] }
 tokio = { version = "1.0", features = ["full"] }
 once_cell = "1.19.0"
 prettytable = { version = "0.10.0" }
+pga_fixtures = { path = "./pga_fixtures" }
 
 [[bin]]
 name = "pgrx_embed_pg_analytics"

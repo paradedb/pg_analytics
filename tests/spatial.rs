@@ -17,18 +17,13 @@
 
 //! Tests for DuckDB Geospatial Extension
 
-mod fixtures;
-
-use crate::fixtures as pga_fixtures;
-use crate::pga_fixtures::{
-    arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query, tempdir,
-};
 use anyhow::Result;
 use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::cast::as_binary_array;
 use geojson::{Feature, GeoJson, Geometry, Value};
+use pga_fixtures::{arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query, tempdir};
 use rstest::rstest;
 use sqlx::PgConnection;
 
