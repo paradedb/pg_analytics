@@ -102,8 +102,19 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
 ) -> Result<bool> {
     unsafe {
         let prepared_stmt = pg_sys::FetchPreparedStatement((*stmt).name, true);
+        let plan_source = *(*prepared_stmt).plansource;
 
-        (*query_desc.as_ptr()).tupDesc = (*(*prepared_stmt).plansource).resultDesc
+        if plan_source.query_list.is_null() {
+            return Ok(true);
+        }
+        let query = (*((*plan_source.query_list).elements).offset(0)).ptr_value as *mut pg_sys::Query;
+        let query_relations = get_query_relations((*query).rtable);
+        if !is_duckdb_query(&query_relations) {
+            return Ok(true);
+        }
+
+        (*query_desc.as_ptr()).tupDesc = (plan_source).resultDesc
+
     }
 
     let query = unsafe { CStr::from_ptr((*query_desc.as_ptr()).sourceText) };
