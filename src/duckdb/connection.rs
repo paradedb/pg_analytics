@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::sync::Once;
 use std::thread;
 
-use super::{csv, delta, iceberg, parquet, secret, spatial};
+use super::{csv, delta, iceberg, json, parquet, secret, spatial};
 
 // Global mutable static variables
 static mut GLOBAL_CONNECTION: Option<UnsafeCell<Connection>> = None;
@@ -143,6 +143,15 @@ pub fn create_spatial_view(
     }
 
     let statement = spatial::create_view(table_name, schema_name, table_options)?;
+    execute(statement.as_str(), [])
+}
+
+pub fn create_json_view(
+    table_name: &str,
+    schema_name: &str,
+    table_options: HashMap<String, String>,
+) -> Result<usize> {
+    let statement = json::create_view(table_name, schema_name, table_options)?;
     execute(statement.as_str(), [])
 }
 
