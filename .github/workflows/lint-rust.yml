@@ -10,6 +10,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "**/*.rs"
+      - "**/*.toml"
       - ".github/workflows/lint-rust.yml"
   workflow_dispatch:
 
@@ -37,7 +38,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-${{ matrix.pg_version }} postgresql-server-dev-${{ matrix.pg_version }}
 
       - name: Extract pgrx version
-        run: echo "PGRX_VERSION=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv)" >> $GITHUB_ENV
+        working-directory: pg_search/
+        run: echo "PGRX_VERSION=$(cargo tree --depth 1 -i pgrx -p pg_search | head -n 1 | cut -f2 -dv )" >> $GITHUB_ENV
 
       - name: Install pgrx
         run: cargo install --locked cargo-pgrx --version ${{ env.PGRX_VERSION }}
@@ -53,3 +55,10 @@ jobs:
 
       - name: Dependency Check
         run: cargo install cargo-machete && cargo machete
+
+      - name: Install taplo
+        run: cargo +stable install taplo-cli --version ^0.9 --locked
+
+      # If you encounter an error, try running 'taplo format' to fix the formatting automatically.
+      - name: Check Cargo.toml Formatting
+        run: taplo format --check
