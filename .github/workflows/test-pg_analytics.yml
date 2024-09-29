@@ -148,4 +148,5 @@ jobs:
           cargo pgrx test "pg${{ matrix.pg_version }}"
 
       - name: Print pg logs
+        if: always()
         run: cat ~/.pgrx/${{ matrix.pg_version}}.log
