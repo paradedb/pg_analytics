@@ -37,7 +37,7 @@ All development of ParadeDB is done via Docker and Compose. Our Docker setup is 
 
 - The `docker-compose.yml` file pulls the latest published ParadeDB image from DockerHub. It is used for hobby production deployments. We recommend using it to deploy ParadeDB in your own infrastructure.
 
-### Pull Request Worfklow
+### Pull Request Workflow
 
 All changes to ParadeDB happen through Github Pull Requests. Here is the recommended
 flow for making a change:
