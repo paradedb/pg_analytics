@@ -25,6 +25,8 @@ use crate::fdw::base::OptionValidator;
 pub enum IcebergOption {
     #[strum(serialize = "allow_moved_paths")]
     AllowMovedPaths,
+    #[strum(serialize = "metadata_compression_codec")]
+    MetadataCompressionCodec,
     #[strum(serialize = "files")]
     Files,
     #[strum(serialize = "preserve_casing")]
@@ -37,6 +39,7 @@ impl OptionValidator for IcebergOption {
     fn is_required(&self) -> bool {
         match self {
             Self::AllowMovedPaths => false,
+            Self::MetadataCompressionCodec => false,
             Self::Files => true,
             Self::PreserveCasing => false,
             Self::Select => false,
@@ -60,7 +63,11 @@ pub fn create_view(
         .get(IcebergOption::AllowMovedPaths.as_ref())
         .map(|option| format!("allow_moved_paths = {option}"));
 
-    let create_iceberg_str = [files, allow_moved_paths]
+    let metadata_compression_codec = table_options
+        .get(IcebergOption::MetadataCompressionCodec.as_ref())
+        .map(|option| format!("MetadataCompressionCodec = '{option}'"));
+
+    let create_iceberg_str = [files, allow_moved_paths, metadata_compression_codec]
         .into_iter()
         .flatten()
         .collect::<Vec<String>>()
