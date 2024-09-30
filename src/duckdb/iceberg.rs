@@ -65,7 +65,7 @@ pub fn create_view(
 
     let metadata_compression_codec = table_options
         .get(IcebergOption::MetadataCompressionCodec.as_ref())
-        .map(|option| format!("MetadataCompressionCodec = '{option}'"));
+        .map(|option| format!("metadata_compression_codec = '{option}'"));
 
     let create_iceberg_str = [files, allow_moved_paths, metadata_compression_codec]
         .into_iter()
