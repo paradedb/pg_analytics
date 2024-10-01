@@ -20,17 +20,21 @@
 mod explain;
 mod prepare;
 
-use std::ffi::CStr;
 use std::ptr::null_mut;
 
 use anyhow::{bail, Result};
 use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
+use std::ops::ControlFlow;
 
-use crate::duckdb::connection::{execute};
+use pg_sys::NodeTag;
+use pgrx::*;
+use sqlparser::ast::visit_relations;
+
 use explain::explain_query;
-use pgrx::pg_sys::NodeTag;
 use prepare::*;
+
+use crate::duckdb::connection::{execute, view_exists};
 
 use super::query::*;
 
@@ -119,9 +123,7 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
-        pg_sys::NodeTag::T_ViewStmt => {
-            view_query(query_string, pstmt.utilityStmt as *mut pg_sys::ViewStmt)?
-        }
+        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -148,43 +150,40 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
 }
 
-fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
+fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
     // Get the current schema in Postgres
     let current_schema = get_postgres_current_schema();
     // Set DuckDB search path according search path in Postgres
     set_search_path_by_pg()?;
 
-    let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
-    let from_clause = unsafe { (*query).fromClause };
-    unsafe {
-        let elements = (*from_clause).elements;
-        for i in 0..(*from_clause).length {
-            let element = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::Node;
+    let dialect = PostgreSqlDialect {};
+    let statements = Parser::parse_sql(&dialect, query_string.to_str()?)?;
+    // visit statements, capturing relations (table names)
+    let mut visited = vec![];
 
-            match (*element).type_ {
-                pg_sys::NodeTag::T_RangeVar => {
-                    if !analyze_range_var(
-                        element as *mut pg_sys::RangeVar,
-                        current_schema.as_str(),
-                    )? {
-                        return Ok(true);
-                    }
-                }
-                pg_sys::NodeTag::T_JoinExpr => {
-                    if !analyze_join_expr(
-                        element as *mut pg_sys::JoinExpr,
-                        current_schema.as_str(),
-                    )? {
-                        return Ok(true);
-                    }
-                }
-                _ => {
-                    continue;
-                }
-            }
+    visit_relations(&statements, |relation| {
+        visited.push(relation.clone());
+        ControlFlow::<()>::Continue(())
+    });
+
+    for relation in visited.iter() {
+        let (schema_name, relation_name) = if relation.0.len() == 1 {
+            (current_schema.clone(), relation.0[0].to_string())
+        } else if relation.0.len() == 2 {
+            (relation.0[0].to_string(), relation.0[1].to_string())
+        } else {
+            error!(
+                "it is not possible to create a view with more than 2 parts in the relation name"
+            );
+        };
+
+        if !view_exists(&relation_name, &schema_name)? {
+            fallback_warning!(format!(
+                "{schema_name}.{relation_name} does not exist in DuckDB"
+            ));
+            return Ok(true);
         }
     }
-
     // Push down the view creation query to DuckDB
     execute(query_string.to_str()?, [])?;
     Ok(true)
