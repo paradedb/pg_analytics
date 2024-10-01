@@ -572,11 +572,9 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     s3.create_bucket(S3_TRIPS_BUCKET).await?;
     s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
 
-    NycTripsTable::setup_s3_listing_fdw(
-        &s3.url.clone(),
-        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
-    )
-    .execute(&mut conn);
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
 
     r#"PREPARE test_query(int) AS SELECT count(*) FROM trips WHERE "VendorID" = $1;"#
         .execute(&mut conn);
@@ -591,42 +589,19 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
 
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
 
-    // cannot fully pushdown to DuckDB
+    // cannot fully pushdown to the DuckDB
+    "CREATE TABLE t1 (a int);".execute(&mut conn);
+    "INSERT INTO t1 VALUES (1);".execute(&mut conn);
     r#"
-    CREATE TABLE rate_code (
-    id INT PRIMARY KEY,
-    name TEXT
-    );
-
-    INSERT INTO rate_code
-    (id, name)
-    VALUES
-    (1, 'one'),
-    (2, 'two'),
-    (3, 'three'),
-    (4, 'four'),
-    (5, 'five'),
-    (99, 'ninety nine');
+    CREATE VIEW primitive_join_view AS
+    SELECT *
+    FROM primitive
+    JOIN t1 ON t1.a = primitive.int32_col
     "#
     .execute(&mut conn);
 
-    let warning_res = r#"
-    create view trips_with_rate_code as
-    select *
-    from trips
-    join rate_code
-    on trips.VendorID = rate_code.id;
-    "#
-    .execute_result(&mut conn);
-
-    if let Err(e) = warning_res {
-        assert_eq!(
-            e.to_string(),
-            "WARNING: public.rate_code does not exist in DuckDB".to_string()
-        );
-    } else {
-        panic!("Expecting an warning but got success");
-    }
+    let res: (i32,) = "SELECT int32_col FROM primitive_join_view".fetch_one(&mut conn);
+    assert_eq!(res.0, 1);
     Ok(())
 }
 
