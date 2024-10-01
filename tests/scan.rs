@@ -560,64 +560,35 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
 
 // Test view creation with foreign table
 #[rstest]
-async fn test_view_foreign_table(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
-    // fully pushdown to DuckDB
-    NycTripsTable::setup().execute(&mut conn);
-    let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
-    s3.client
-        .create_bucket()
-        .bucket(S3_TRIPS_BUCKET)
-        .send()
-        .await?;
-    s3.create_bucket(S3_TRIPS_BUCKET).await?;
-    s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
+async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
 
-    NycTripsTable::setup_s3_listing_fdw(
-        &s3.url.clone(),
-        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
-    )
-    .execute(&mut conn);
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
 
-    "CREATE VIEW trips_view AS SELECT COUNT(*) FROM trips".execute(&mut conn);
-    let res: (i64,) = "SELECT * FROM trips_view".fetch_one(&mut conn);
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "primitive")
+        .execute(&mut conn);
 
-    assert_eq!(res.0, 100);
+    // fully pushdown to the DuckDB
+    "CREATE VIEW primitive_view AS SELECT * FROM primitive".execute(&mut conn);
+    let res: (bool,) = "SELECT boolean_col FROM primitive_view".fetch_one(&mut conn);
+    assert_eq!(res.0, true);
 
-    // cannot fully pushdown to DuckDB
+    // cannot fully pushdown to the DuckDB
+    "CREATE TABLE t1 (a int);".execute(&mut conn);
+    "INSERT INTO t1 VALUES (1);".execute(&mut conn);
     r#"
-    CREATE TABLE rate_code (
-    id INT PRIMARY KEY,
-    name TEXT
-    );
-
-    INSERT INTO rate_code
-    (id, name)
-    VALUES
-    (1, 'one'),
-    (2, 'two'),
-    (3, 'three'),
-    (4, 'four'),
-    (5, 'five'),
-    (99, 'ninety nine');
+    CREATE VIEW primitive_join_view AS
+    SELECT *
+    FROM primitive
+    JOIN t1 ON t1.a = primitive.int32_col
     "#
     .execute(&mut conn);
 
-    let warning_res = r#"
-    create view trips_with_rate_code as
-    select *
-    from trips
-    join rate_code
-    on trips.VendorID = rate_code.id;
-    "#
-    .execute_result(&mut conn);
-
-    if let Err(e) = warning_res {
-        assert_eq!(
-            e.to_string(),
-            "WARNING: public.rate_code does not exist in DuckDB".to_string()
-        );
-    } else {
-        panic!("Expecting an warning but got success");
-    }
+    let res: (i32,) = "SELECT int32_col FROM primitive_join_view".fetch_one(&mut conn);
+    assert_eq!(res.0, 1);
     Ok(())
 }
