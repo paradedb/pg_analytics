@@ -575,7 +575,7 @@ async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Re
     // fully pushdown to the DuckDB
     "CREATE VIEW primitive_view AS SELECT * FROM primitive".execute(&mut conn);
     let res: (bool,) = "SELECT boolean_col FROM primitive_view".fetch_one(&mut conn);
-    assert_eq!(res.0, true);
+    assert!(res.0);
 
     // cannot fully pushdown to the DuckDB
     "CREATE TABLE t1 (a int);".execute(&mut conn);
