@@ -27,6 +27,8 @@ pub enum IcebergOption {
     AllowMovedPaths,
     #[strum(serialize = "metadata_compression_codec")]
     MetadataCompressionCodec,
+    #[strum(serialize = "skip_schema_inference")]
+    SkipSchemaInference,
     #[strum(serialize = "files")]
     Files,
     #[strum(serialize = "preserve_casing")]
@@ -40,6 +42,7 @@ impl OptionValidator for IcebergOption {
         match self {
             Self::AllowMovedPaths => false,
             Self::MetadataCompressionCodec => false,
+            Self::SkipSchemaInference => false,
             Self::Files => true,
             Self::PreserveCasing => false,
             Self::Select => false,
@@ -67,7 +70,11 @@ pub fn create_view(
         .get(IcebergOption::MetadataCompressionCodec.as_ref())
         .map(|option| format!("metadata_compression_codec = '{option}'"));
 
-    let create_iceberg_str = [files, allow_moved_paths, metadata_compression_codec]
+    let skip_schema_inference = table_options
+        .get(IcebergOption::SkipSchemaInference.as_ref())
+        .map(|option| format!("skip_schema_inference = {option}"));
+
+    let create_iceberg_str = [files, allow_moved_paths, metadata_compression_codec, skip_schema_inference]
         .into_iter()
         .flatten()
         .collect::<Vec<String>>()
