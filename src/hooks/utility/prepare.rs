@@ -66,7 +66,7 @@ pub fn prepare_query(
             null_mut()
         };
 
-        #[cfg(not(feature = "pg13"))]
+        #[cfg(any(feature = "pg15", feature = "pg16", feature = "pg17"))]
         {
             pg_sys::parse_analyze_varparams(
                 &mut raw_stmt,
@@ -76,7 +76,7 @@ pub fn prepare_query(
                 null_mut(),
             )
         }
-        #[cfg(feature = "pg13")]
+        #[cfg(any(feature = "pg13", feature = "pg14"))]
         {
             pg_sys::parse_analyze_varparams(
                 &mut raw_stmt,
