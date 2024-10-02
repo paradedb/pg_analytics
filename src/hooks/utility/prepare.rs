@@ -102,22 +102,29 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
 ) -> Result<bool> {
     unsafe {
         let prepared_stmt = pg_sys::FetchPreparedStatement((*stmt).name, true);
-        let plan_source = *(*prepared_stmt).plansource;
+        let plan_source = (*prepared_stmt).plansource;
 
-        if plan_source.query_list.is_null() {
-            return Ok(true);
-        }
-        let query =
-            (*((*plan_source.query_list).elements).offset(0)).ptr_value as *mut pg_sys::Query;
-        let query_relations = get_query_relations((*query).rtable);
-        if !is_duckdb_query(&query_relations) {
+        if (*plan_source).query_list.is_null() || !(*plan_source).fixed_result  {
             return Ok(true);
         }
 
-        (*query_desc.as_ptr()).tupDesc = (plan_source).resultDesc
+        let cached_plan = pg_sys::GetCachedPlan(plan_source, null_mut(), null_mut(), null_mut());
+        if (*cached_plan).stmt_list.is_null() {
+            return Ok(true);
+        }
+
+        let planned_stmt = (*(*(*cached_plan).stmt_list).elements.offset(0)).ptr_value  as *mut pg_sys::PlannedStmt;
+        let query_relations = get_query_relations((*planned_stmt).rtable);
+        if  (*planned_stmt).commandType !=  pg_sys::CmdType::CMD_SELECT ||  !is_duckdb_query(&query_relations) {
+            return Ok(true);
+        }
+
+        (*query_desc.as_ptr()).tupDesc = (*plan_source).resultDesc
     }
 
     let query = unsafe { CStr::from_ptr((*query_desc.as_ptr()).sourceText) };
+
+    set_search_path_by_pg()?;
     match connection::create_arrow(query.to_str()?) {
         Err(err) => {
             connection::clear_arrow();
