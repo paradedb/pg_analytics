@@ -66,13 +66,25 @@ pub fn prepare_query(
             null_mut()
         };
 
-        pg_sys::parse_analyze_varparams(
-            &mut raw_stmt,
-            (*pstate).p_sourcetext,
-            &mut types_oid,
-            &mut nargs,
-            null_mut(),
-        )
+        #[cfg(not(feature = "pg13"))]
+        {
+            pg_sys::parse_analyze_varparams(
+                &mut raw_stmt,
+                (*pstate).p_sourcetext,
+                &mut types_oid,
+                &mut nargs,
+                null_mut(),
+            )
+        }
+        #[cfg(feature = "pg13")]
+        {
+            pg_sys::parse_analyze_varparams(
+                &mut raw_stmt,
+                (*pstate).p_sourcetext,
+                &mut types_oid,
+                &mut nargs,
+            )
+        }
     };
 
     let query_relations = get_query_relations(unsafe { (*query).rtable });
