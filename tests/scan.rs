@@ -22,7 +22,7 @@ use crate::fixtures::arrow::{
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
     primitive_record_batch_single, primitive_setup_fdw_local_file_delta,
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
-    primitive_setup_fdw_s3_listing,
+    primitive_setup_fdw_s3_listing, setup_parquet_wrapper_and_server,
 };
 use crate::fixtures::db::Query;
 use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
@@ -593,6 +593,11 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     Ok(())
 }
 
+// Note: PostgreSQL will replan the query when certain catalog changes occur,
+// such as changes to the search path or when a table is deleted.
+// In contrast, DuckDB does not replan when the search path is changed.
+// If there are two foreign tables in different schemas and the prepared statements do not specify the schemas,
+// it may lead to ambiguity or errors when referencing the tables.
 #[rstest]
 async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
     let stored_batch = primitive_record_batch()?;
@@ -612,8 +617,12 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
     writer.write(&stored_batch_less)?;
     writer.close()?;
 
+    // In this example, we create two tables with identical structures and names, but in different schemas.
+    // We expect that when the search path is changed, the correct table (the one in the current schema) will be referenced in DuckDB.
     "CREATE SCHEMA tpch1".execute(&mut conn);
     "CREATE SCHEMA tpch2".execute(&mut conn);
+
+    setup_parquet_wrapper_and_server().execute(&mut conn);
 
     let file_path = parquet_path.as_path().to_str().unwrap();
     let file_less_path = less_parquet_path.as_path().to_str().unwrap();
@@ -626,7 +635,7 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
 
     "SET search_path TO tpch1".execute(&mut conn);
 
-    "PREPARE q1 AS SELECT * FROM t1 where boolean_col = $1".execute(&mut conn);
+    "PREPARE q1 AS SELECT * FROM t1 WHERE boolean_col = $1".execute(&mut conn);
 
     let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
     assert_eq!(result.len(), 2);
