@@ -44,9 +44,12 @@ fn array_data() -> ArrayData {
 }
 
 fn single_array_data() -> ArrayData {
+    let values: [u8; 5] = *b"hello";
+    let offsets: [i32; 2] = [0, 5];
     ArrayData::builder(DataType::Binary)
         .len(1)
-        .add_buffer(Buffer::from("hello"))
+        .add_buffer(Buffer::from_slice_ref(&offsets[..]))
+        .add_buffer(Buffer::from_slice_ref(&values[..]))
         .build()
         .unwrap()
 }
@@ -75,9 +78,12 @@ fn binary_array_data() -> ArrayData {
 }
 
 fn single_binary_array_data() -> ArrayData {
-    ArrayData::builder(DataType::Binary)
+    let values: [u8; 5] = *b"hello";
+    let offsets: [i64; 2] = [0, 5];
+    ArrayData::builder(DataType::LargeBinary)
         .len(1)
-        .add_buffer(Buffer::from("hello"))
+        .add_buffer(Buffer::from_slice_ref(&offsets[..]))
+        .add_buffer(Buffer::from_slice_ref(&values[..]))
         .build()
         .unwrap()
 }
@@ -454,6 +460,20 @@ pub fn setup_local_file_listing_with_casing(local_file_path: &str, table: &str) 
         {create_server};
         {create_table} OPTIONS (files '{local_file_path}', preserve_casing 'true'); 
     "#
+    )
+}
+
+pub fn setup_parquet_wrapper_and_server() -> String {
+    let create_foreign_data_wrapper = primitive_create_foreign_data_wrapper(
+        "parquet_wrapper",
+        "parquet_fdw_handler",
+        "parquet_fdw_validator",
+    );
+    let create_server = primitive_create_server("parquet_server", "parquet_wrapper");
+    format!(
+        "{create_foreign_data_wrapper};
+         {create_server};
+        "
     )
 }
 
