@@ -130,7 +130,11 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
         }
 
         // we need to make Duckdb replan the `PREPARE` statement when search path changed.
+        #[cfg(not(feature = "pg17"))]
         let need_replan = !pg_sys::OverrideSearchPathMatchesCurrent((*plan_source).search_path);
+
+        #[cfg(feature = "pg17")]
+        let need_replan = !pg_sys::SearchPathMatchesCurrentEnvironment((*plan_source).search_path);
 
         let cached_plan = pg_sys::GetCachedPlan(plan_source, null_mut(), null_mut(), null_mut());
         if cached_plan.is_null() || (*cached_plan).stmt_list.is_null() {
