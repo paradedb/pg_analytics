@@ -19,7 +19,7 @@ use std::ffi::CStr;
 use std::ptr::null_mut;
 
 use anyhow::Result;
-use pgrx::{pg_sys, pgbox, warning, PgBox};
+use pgrx::{error, pg_sys, pgbox, warning, PgBox};
 
 use crate::duckdb::connection;
 use crate::hooks::query::*;
@@ -33,6 +33,15 @@ pub fn prepare_query(
     if unsafe { (*stmt).name }.is_null() || unsafe { *(*stmt).name } == '\0' as std::os::raw::c_char
     {
         return Ok(true);
+    }
+
+    let prepared_stmt = unsafe { pg_sys::FetchPreparedStatement((*stmt).name, false) };
+    if !prepared_stmt.is_null() {
+        let stmt_name = unsafe { CStr::from_ptr((*stmt).name) };
+        error!(
+            "prepared statement \"{}\" already exists",
+            stmt_name.to_str()?
+        );
     }
 
     // Perform parsing and analysis to get the Query
@@ -116,12 +125,15 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
         let prepared_stmt = pg_sys::FetchPreparedStatement((*stmt).name, true);
         let plan_source = (*prepared_stmt).plansource;
 
-        if (*plan_source).query_list.is_null() || !(*plan_source).fixed_result {
+        if plan_source.is_null() || !(*plan_source).fixed_result {
             return Ok(true);
         }
 
+        // we need to make Duckdb replan the `PREPARE` statement when search path changed.
+        let need_replan = !pg_sys::OverrideSearchPathMatchesCurrent((*plan_source).search_path);
+
         let cached_plan = pg_sys::GetCachedPlan(plan_source, null_mut(), null_mut(), null_mut());
-        if (*cached_plan).stmt_list.is_null() {
+        if cached_plan.is_null() || (*cached_plan).stmt_list.is_null() {
             return Ok(true);
         }
 
@@ -134,12 +146,22 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
             return Ok(true);
         }
 
-        (*query_desc.as_ptr()).tupDesc = (*plan_source).resultDesc
+        (*query_desc.as_ptr()).tupDesc = (*plan_source).resultDesc;
+
+        // Note that DuckDB does not replan prepared statements when the search path changes.
+        // We enforce this by executing the PREPARE statement again.
+        set_search_path_by_pg()?;
+
+        if need_replan {
+            let prepare_stmt = CStr::from_ptr((*plan_source).query_string);
+            if let Err(e) = connection::execute(prepare_stmt.to_str()?, []) {
+                error!("execute prepare replan error: {}", e.to_string());
+            }
+        }
     }
 
     let query = unsafe { CStr::from_ptr((*query_desc.as_ptr()).sourceText) };
 
-    set_search_path_by_pg()?;
     match connection::create_arrow(query.to_str()?) {
         Err(err) => {
             connection::clear_arrow();
@@ -169,7 +191,8 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
 pub fn deallocate_query(stmt: *mut pg_sys::DeallocateStmt) -> Result<bool> {
     if !unsafe { (*stmt).name }.is_null() {
         let name = unsafe { CStr::from_ptr((*stmt).name) };
-        // we don't care the result
+        // We don't care the result
+        // Next prepare statement will override this one.
         let _ = connection::execute(&format!(r#"DEALLOCATE "{}""#, name.to_str()?), []);
     }
 

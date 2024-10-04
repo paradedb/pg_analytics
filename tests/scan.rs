@@ -20,8 +20,9 @@ mod fixtures;
 use crate::fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
-    primitive_setup_fdw_local_file_delta, primitive_setup_fdw_local_file_listing,
-    primitive_setup_fdw_s3_delta, primitive_setup_fdw_s3_listing,
+    primitive_record_batch_single, primitive_setup_fdw_local_file_delta,
+    primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
+    primitive_setup_fdw_s3_listing,
 };
 use crate::fixtures::db::Query;
 use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
@@ -588,6 +589,51 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     "DEALLOCATE test_query".execute(&mut conn);
 
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    let stored_batch_less = primitive_record_batch_single()?;
+    let less_parquet_path = tempdir.path().join("test_arrow_types_less.parquet");
+    let less_parquet_file = File::create(&less_parquet_path)?;
+
+    let mut writer =
+        ArrowWriter::try_new(less_parquet_file, stored_batch_less.schema(), None).unwrap();
+    writer.write(&stored_batch_less)?;
+    writer.close()?;
+
+    "CREATE SCHEMA tpch1".execute(&mut conn);
+    "CREATE SCHEMA tpch2".execute(&mut conn);
+
+    let file_path = parquet_path.as_path().to_str().unwrap();
+    let file_less_path = less_parquet_path.as_path().to_str().unwrap();
+
+    let create_table_t1 = primitive_create_table("parquet_server", "tpch1.t1");
+    (&format!("{create_table_t1} OPTIONS (files '{file_path}');")).execute(&mut conn);
+
+    let create_table_less_t1 = primitive_create_table("parquet_server", "tpch2.t1");
+    (&format!("{create_table_less_t1} OPTIONS (files '{file_less_path}');")).execute(&mut conn);
+
+    "SET search_path TO tpch1".execute(&mut conn);
+
+    "PREPARE q1 AS SELECT * FROM t1 where boolean_col = $1".execute(&mut conn);
+
+    let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
+    assert_eq!(result.len(), 2);
+
+    "SET search_path TO tpch2".execute(&mut conn);
+    let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
+    assert_eq!(result.len(), 1);
 
     Ok(())
 }

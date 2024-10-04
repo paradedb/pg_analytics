@@ -43,6 +43,14 @@ fn array_data() -> ArrayData {
         .unwrap()
 }
 
+fn single_array_data() -> ArrayData {
+    ArrayData::builder(DataType::Binary)
+        .len(1)
+        .add_buffer(Buffer::from("hello"))
+        .build()
+        .unwrap()
+}
+
 // Fixed size binary is not supported yet, but this will be useful for test data when we do support.
 fn fixed_size_array_data() -> ArrayData {
     let values: [u8; 15] = *b"hellotherearrow"; // Ensure length is consistent
@@ -62,6 +70,14 @@ fn binary_array_data() -> ArrayData {
         .len(3) // Ensure length is consistent
         .add_buffer(Buffer::from_slice_ref(&offsets[..]))
         .add_buffer(Buffer::from_slice_ref(&values[..]))
+        .build()
+        .unwrap()
+}
+
+fn single_binary_array_data() -> ArrayData {
+    ArrayData::builder(DataType::Binary)
+        .len(1)
+        .add_buffer(Buffer::from("hello"))
         .build()
         .unwrap()
 }
@@ -119,10 +135,8 @@ pub fn record_batch_with_casing() -> Result<RecordBatch> {
     Ok(batch)
 }
 
-// Blows up deltalake, so comment out for now.
-pub fn primitive_record_batch() -> Result<RecordBatch> {
-    // Define the fields for each datatype
-    let fields = vec![
+pub fn primitive_fields() -> Vec<Field> {
+    vec![
         Field::new("boolean_col", DataType::Boolean, true),
         Field::new("int8_col", DataType::Int8, false),
         Field::new("int16_col", DataType::Int16, false),
@@ -140,7 +154,13 @@ pub fn primitive_record_batch() -> Result<RecordBatch> {
         Field::new("large_binary_col", DataType::LargeBinary, false),
         Field::new("utf8_col", DataType::Utf8, false),
         Field::new("large_utf8_col", DataType::LargeUtf8, false),
-    ];
+    ]
+}
+
+// Blows up deltalake, so comment out for now.
+pub fn primitive_record_batch() -> Result<RecordBatch> {
+    // Define the fields for each datatype
+    let fields = primitive_fields();
 
     // Create a schema from the fields
     let schema = Arc::new(Schema::new(fields));
@@ -182,6 +202,38 @@ pub fn primitive_record_batch() -> Result<RecordBatch> {
                 Some("There"),
                 Some("World"),
             ])),
+        ],
+    )?)
+}
+
+pub fn primitive_record_batch_single() -> Result<RecordBatch> {
+    // Define the fields for each datatype
+    let fields = primitive_fields();
+
+    // Create a schema from the fields
+    let schema = Arc::new(Schema::new(fields));
+
+    // Create a RecordBatch
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(BooleanArray::from(vec![Some(true)])),
+            Arc::new(Int8Array::from(vec![1])),
+            Arc::new(Int16Array::from(vec![1])),
+            Arc::new(Int32Array::from(vec![1])),
+            Arc::new(Int64Array::from(vec![1])),
+            Arc::new(UInt8Array::from(vec![1])),
+            Arc::new(UInt16Array::from(vec![1])),
+            Arc::new(UInt32Array::from(vec![1])),
+            Arc::new(UInt64Array::from(vec![1])),
+            Arc::new(Float32Array::from(vec![1.0])),
+            Arc::new(Float64Array::from(vec![1.0])),
+            Arc::new(Date32Array::from(vec![18262])),
+            Arc::new(Date64Array::from(vec![1609459200000])),
+            Arc::new(BinaryArray::from(single_array_data())),
+            Arc::new(LargeBinaryArray::from(single_binary_array_data())),
+            Arc::new(StringArray::from(vec![Some("Hello")])),
+            Arc::new(LargeStringArray::from(vec![Some("Hello")])),
         ],
     )?)
 }
