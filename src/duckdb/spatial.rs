@@ -25,24 +25,16 @@ use crate::fdw::base::OptionValidator;
 /// SpatialOption is an enum that represents the options that can be passed to the st_read function.
 /// Reference https://github.com/duckdb/duckdb_spatial/blob/main/docs/functions.md#st_read
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum SpatialOption {
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "sequential_layer_scan")]
     SequentialLayerScan,
-    #[strum(serialize = "spatial_filter")]
     SpatialFilter,
-    #[strum(serialize = "open_options")]
     OpenOptions,
-    #[strum(serialize = "layer")]
     Layer,
-    #[strum(serialize = "allowed_drivers")]
     AllowedDrivers,
-    #[strum(serialize = "sibling_files")]
     SiblingFiles,
-    #[strum(serialize = "spatial_filter_box")]
     SpatialFilterBox,
-    #[strum(serialize = "keep_wkb")]
     KeepWkb,
 }
 

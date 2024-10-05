@@ -24,74 +24,41 @@ use crate::fdw::base::OptionValidator;
 use super::utils;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum CsvOption {
-    #[strum(serialize = "all_varchar")]
     AllVarchar,
-    #[strum(serialize = "allow_quoted_nulls")]
     AllowQuotedNulls,
-    #[strum(serialize = "auto_detect")]
     AutoDetect,
-    #[strum(serialize = "auto_type_candidates")]
     AutoTypeCandidates,
-    #[strum(serialize = "columns")]
     Columns,
-    #[strum(serialize = "compression")]
     Compression,
-    #[strum(serialize = "dateformat")]
     Dateformat,
-    #[strum(serialize = "decimal_separator")]
     DecimalSeparator,
-    #[strum(serialize = "delim")]
     Delim,
-    #[strum(serialize = "escape")]
     Escape,
-    #[strum(serialize = "filename")]
     Filename,
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "force_not_null")]
     ForceNotNull,
-    #[strum(serialize = "header")]
     Header,
-    #[strum(serialize = "hive_partitioning")]
     HivePartitioning,
-    #[strum(serialize = "hive_types")]
     HiveTypes,
-    #[strum(serialize = "hive_types_autocast")]
     HiveTypesAutocast,
-    #[strum(serialize = "ignore_errors")]
     IgnoreErrors,
-    #[strum(serialize = "max_line_size")]
     MaxLineSize,
-    #[strum(serialize = "names")]
     Names,
-    #[strum(serialize = "new_line")]
     NewLine,
-    #[strum(serialize = "normalize_names")]
     NormalizeNames,
-    #[strum(serialize = "null_padding")]
     NullPadding,
-    #[strum(serialize = "nullstr")]
     Nullstr,
-    #[strum(serialize = "parallel")]
     Parallel,
-    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
-    #[strum(serialize = "quote")]
     Quote,
-    #[strum(serialize = "sample_size")]
     SampleSize,
-    #[strum(serialize = "select")]
     Select,
-    #[strum(serialize = "sep")]
     Sep,
-    #[strum(serialize = "skip")]
     Skip,
-    #[strum(serialize = "timestampformat")]
     Timestampformat,
-    #[strum(serialize = "types")]
     Types,
-    #[strum(serialize = "union_by_name")]
     UnionByName,
 }
 
