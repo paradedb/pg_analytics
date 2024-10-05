@@ -21,12 +21,10 @@ use std::collections::HashMap;
 use strum::{AsRefStr, EnumIter};
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum DeltaOption {
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
-    #[strum(serialize = "select")]
     Select,
 }
 
