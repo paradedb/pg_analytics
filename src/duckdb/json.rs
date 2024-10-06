@@ -24,40 +24,24 @@ use crate::fdw::base::OptionValidator;
 use super::utils;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug, Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum JsonOption {
-    #[strum(serialize = "auto_detect")]
     AutoDetect,
-    #[strum(serialize = "columns")]
     Columns,
-    #[strum(serialize = "compression")]
     Compression,
-    #[strum(serialize = "convert_strings_to_integers")]
     ConvertStringsToIntegers,
-    #[strum(serialize = "dateformat")]
     Dateformat,
-    #[strum(serialize = "filename")]
     Filename,
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "format")]
     Format,
-    #[strum(serialize = "hive_partitioning")]
     HivePartitioning,
-    #[strum(serialize = "ignore_errors")]
     IgnoreErrors,
-    #[strum(serialize = "maximum_depth")]
     MaximumDepth,
-    #[strum(serialize = "maximum_object_size")]
     MaximumObjectSize,
-    #[strum(serialize = "records")]
     Records,
-    #[strum(serialize = "sample_size")]
     SampleSize,
-    #[strum(serialize = "select")]
     Select,
-    #[strum(serialize = "timestampformat")]
     Timestampformat,
-    #[strum(serialize = "union_by_name")]
     UnionByName,
 }
 
