@@ -17,7 +17,7 @@
 
 use anyhow::{bail, Result};
 use pgrx::*;
-use std::ffi::CStr;
+use std::ffi::{c_char, CStr};
 use supabase_wrappers::prelude::{options_to_hashmap, user_mapping_options};
 
 use super::base::register_duckdb_view;
@@ -93,7 +93,21 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
 
     // Get relation name, oid, etc. that triggered the event
     let relation = create_stmt.relation;
-    let schema_name = CStr::from_ptr((*relation).schemaname).to_str()?;
+
+    // Fetch the current schema name if the pointer to it is null
+    // This pointer is null in pg13 when the user doesn't specify the schema in the CREATE FOREIGN TABLE statement
+    let schema_name = match ((*relation).schemaname as *const c_char).is_null() {
+        true => Spi::connect(|client| {
+            client
+                // Casting as TEXT because the default return type is name (Oid(19)) and the conversion to Rust string fails
+                .select("SELECT CURRENT_SCHEMA::TEXT", None, None)?
+                .first()
+                .get_one()
+        })?
+        .unwrap(),
+        false => CStr::from_ptr((*relation).schemaname).to_str()?,
+    };
+
     let table_name = CStr::from_ptr((*relation).relname).to_str()?;
     let oid = pg_sys::RangeVarGetRelidExtended(
         relation,
