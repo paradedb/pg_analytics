@@ -146,7 +146,3 @@ jobs:
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           cargo pgrx test "pg${{ matrix.pg_version }}"
-
-      - name: Print pg logs
-        if: always()
-        run: cat ~/.pgrx/${{ matrix.pg_version}}.log
