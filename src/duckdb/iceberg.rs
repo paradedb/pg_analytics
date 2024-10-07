@@ -74,11 +74,16 @@ pub fn create_view(
         .get(IcebergOption::SkipSchemaInference.as_ref())
         .map(|option| format!("skip_schema_inference = {option}"));
 
-    let create_iceberg_str = [files, allow_moved_paths, metadata_compression_codec, skip_schema_inference]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<String>>()
-        .join(", ");
+    let create_iceberg_str = [
+        files,
+        allow_moved_paths,
+        metadata_compression_codec,
+        skip_schema_inference
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<String>>()
+    .join(", ");
 
     let default_select = "*".to_string();
     let select = table_options
