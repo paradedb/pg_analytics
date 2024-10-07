@@ -24,26 +24,17 @@ use crate::fdw::base::OptionValidator;
 use super::utils;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum ParquetOption {
-    #[strum(serialize = "binary_as_string")]
     BinaryAsString,
-    #[strum(serialize = "filename")]
     FileName,
-    #[strum(serialize = "file_row_number")]
     FileRowNumber,
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "hive_partitioning")]
     HivePartitioning,
-    #[strum(serialize = "hive_types")]
     HiveTypes,
-    #[strum(serialize = "hive_types_autocast")]
     HiveTypesAutocast,
-    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
-    #[strum(serialize = "union_by_name")]
     UnionByName,
-    #[strum(serialize = "select")]
     Select,
     // TODO: EncryptionConfig
 }

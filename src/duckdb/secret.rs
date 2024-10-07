@@ -22,53 +22,32 @@ use strum::{AsRefStr, EnumIter};
 use crate::fdw::base::OptionValidator;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum UserMappingOptions {
     // Universal
-    #[strum(serialize = "type")]
     Type,
-    #[strum(serialize = "provider")]
     Provider,
-    #[strum(serialize = "scope")]
     Scope,
-    #[strum(serialize = "chain")]
     Chain,
     // S3/GCS/R2
-    #[strum(serialize = "key_id")]
     KeyId,
-    #[strum(serialize = "secret")]
     Secret,
-    #[strum(serialize = "region")]
     Region,
-    #[strum(serialize = "session_token")]
     SessionToken,
-    #[strum(serialize = "endpoint")]
     Endpoint,
-    #[strum(serialize = "url_style")]
     UrlStyle,
-    #[strum(serialize = "use_ssl")]
     UseSsl,
-    #[strum(serialize = "url_compatibility_mode")]
     UrlCompatibilityMode,
-    #[strum(serialize = "account_id")]
     AccountId,
     // Azure
-    #[strum(serialize = "connection_string")]
     ConnectionString,
-    #[strum(serialize = "account_name")]
     AccountName,
-    #[strum(serialize = "tenant_id")]
     TenantId,
-    #[strum(serialize = "client_id")]
     ClientId,
-    #[strum(serialize = "client_secret")]
     ClientSecret,
-    #[strum(serialize = "client_certificate_path")]
     ClientCertificatePath,
-    #[strum(serialize = "http_proxy")]
     HttpProxy,
-    #[strum(serialize = "proxy_user_name")]
     ProxyUserName,
-    #[strum(serialize = "proxy_password")]
     ProxyPassword,
 }
 

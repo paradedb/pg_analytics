@@ -22,18 +22,13 @@ use strum::{AsRefStr, EnumIter};
 use crate::fdw::base::OptionValidator;
 
 #[derive(EnumIter, AsRefStr, PartialEq, Debug)]
+#[strum(serialize_all = "snake_case")]
 pub enum IcebergOption {
-    #[strum(serialize = "allow_moved_paths")]
     AllowMovedPaths,
-    #[strum(serialize = "metadata_compression_codec")]
     MetadataCompressionCodec,
-    #[strum(serialize = "skip_schema_inference")]
     SkipSchemaInference,
-    #[strum(serialize = "files")]
     Files,
-    #[strum(serialize = "preserve_casing")]
     PreserveCasing,
-    #[strum(serialize = "select")]
     Select,
 }
 
