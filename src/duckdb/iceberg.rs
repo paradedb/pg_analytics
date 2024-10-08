@@ -25,6 +25,8 @@ use crate::fdw::base::OptionValidator;
 #[strum(serialize_all = "snake_case")]
 pub enum IcebergOption {
     AllowMovedPaths,
+    MetadataCompressionCodec,
+    SkipSchemaInference,
     Files,
     PreserveCasing,
     Select,
@@ -34,6 +36,8 @@ impl OptionValidator for IcebergOption {
     fn is_required(&self) -> bool {
         match self {
             Self::AllowMovedPaths => false,
+            Self::MetadataCompressionCodec => false,
+            Self::SkipSchemaInference => false,
             Self::Files => true,
             Self::PreserveCasing => false,
             Self::Select => false,
@@ -57,11 +61,24 @@ pub fn create_view(
         .get(IcebergOption::AllowMovedPaths.as_ref())
         .map(|option| format!("allow_moved_paths = {option}"));
 
-    let create_iceberg_str = [files, allow_moved_paths]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<String>>()
-        .join(", ");
+    let metadata_compression_codec = table_options
+        .get(IcebergOption::MetadataCompressionCodec.as_ref())
+        .map(|option| format!("metadata_compression_codec = '{option}'"));
+
+    let skip_schema_inference = table_options
+        .get(IcebergOption::SkipSchemaInference.as_ref())
+        .map(|option| format!("skip_schema_inference = {option}"));
+
+    let create_iceberg_str = [
+        files,
+        allow_moved_paths,
+        metadata_compression_codec,
+        skip_schema_inference,
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<String>>()
+    .join(", ");
 
     let default_select = "*".to_string();
     let select = table_options
