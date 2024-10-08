@@ -94,6 +94,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     // Get relation name, oid, etc. that triggered the event
     let relation = create_stmt.relation;
 
+    #[cfg(feature = "pg13")]
     // Fetch the current schema name if the pointer to it is null
     // This pointer is null in pg13 when the user doesn't specify the schema in the CREATE FOREIGN TABLE statement
     let schema_name = match ((*relation).schemaname as *const c_char).is_null() {
@@ -107,6 +108,9 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
         .unwrap(),
         false => CStr::from_ptr((*relation).schemaname).to_str()?,
     };
+
+    #[cfg(not(feature = "pg13"))]
+    let schema_name = CStr::from_ptr((*relation).schemaname).to_str()?;
 
     let table_name = CStr::from_ptr((*relation).relname).to_str()?;
     let oid = pg_sys::RangeVarGetRelidExtended(
