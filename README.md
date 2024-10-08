@@ -48,7 +48,7 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] Delta Lake
 - [x] JSON
 
-`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 14, 15, 16 and 17. Support for Postgres 13 is coming soon.
+`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 17, 16, 15, 14 and 13.
 
 ## Installation
 
@@ -85,7 +85,7 @@ This ensures the best query performance from the extension .
 
 #### Debian/Ubuntu
 
-We provide prebuilt binaries for Debian-based Linux for Postgres 17, 16, 15 and 14. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
+We provide prebuilt binaries for Debian-based Linux for Postgres 17, 16, 15, 14 and 13. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
 
 ParadeDB collects anonymous telemetry to help us understand how many people are using the project. You can opt out of telemetry by setting `export PARADEDB_TELEMETRY=false` (or unsetting the variable) in your shell or in your `~/.bashrc` file before running the extension.
 
@@ -198,7 +198,7 @@ export PATH="$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin"
 Then, install and initialize `pgrx`:
 
 ```bash
-# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg16, --pg15, --pg14, etc.)
+# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg17, --pg16, --pg15, --pg14, --pg13 etc.)
 cargo install --locked cargo-pgrx --version 0.12.5
 
 # macOS arm64
