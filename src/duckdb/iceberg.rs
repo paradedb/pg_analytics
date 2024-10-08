@@ -73,7 +73,7 @@ pub fn create_view(
         files,
         allow_moved_paths,
         metadata_compression_codec,
-        skip_schema_inference
+        skip_schema_inference,
     ]
     .into_iter()
     .flatten()
