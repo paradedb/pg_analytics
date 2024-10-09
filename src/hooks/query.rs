@@ -27,7 +27,7 @@ use crate::schema::cell::*;
 
 macro_rules! fallback_warning {
     ($msg:expr) => {
-        warning!("This query was not fully pushed down to DuckDB because DuckDB returned an error. Query times may be impacted. If you would like to see this query pushed down, please submit a request to https://github.com/paradedb/paradedb/issues with the following context:\n{}", $msg);
+        warning!("This query was not fully pushed down to DuckDB because DuckDB returned an error. Query times may be impacted. If you would like to see this query pushed down, please submit a request to https://github.com/paradedb/pg_analytics/issues with the following context:\n{}", $msg);
     };
 }
 
