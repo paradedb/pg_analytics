@@ -122,6 +122,7 @@ jobs:
       # The integration tests also test upgrading the extension when passed the '-u' flag (only on promotion PRs)
       - name: Run pg_analytics Cargo Test Suite
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
+        working-directory: pg_analytics/
         env:
           LLVM_PROFILE_FILE: target/coverage/pg_analytics-%p-%m.profraw
           RUST_BACKTRACE: full
