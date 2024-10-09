@@ -17,12 +17,21 @@
 
 #![allow(clippy::too_many_arguments)]
 
-use std::ffi::CString;
+use std::{ffi::CString, ops::ControlFlow};
 
 use anyhow::{bail, Result};
 use pg_sys::NodeTag;
 use pgrx::*;
-use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
+use sqlparser::{
+    ast::{visit_relations, Statement},
+    dialect::PostgreSqlDialect,
+    parser::Parser,
+};
+
+use crate::{
+    duckdb::connection::{execute, view_exists},
+    fallback_warning,
+};
 
 use super::query::*;
 
@@ -72,6 +81,7 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
+        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -92,7 +102,46 @@ pub async fn process_utility_hook(
 }
 
 fn is_support_utility(stmt_type: NodeTag) -> bool {
-    stmt_type == pg_sys::NodeTag::T_ExplainStmt
+    stmt_type == pg_sys::NodeTag::T_ExplainStmt || stmt_type == pg_sys::NodeTag::T_ViewStmt
+}
+
+fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
+    // Get the current schema in Postgres
+    let current_schema = get_postgres_current_schema();
+    // Set DuckDB search path according search path in Postgres
+    set_search_path_by_pg()?;
+
+    let dialect = PostgreSqlDialect {};
+    let statements = Parser::parse_sql(&dialect, query_string.to_str()?)?;
+    // visit statements, capturing relations (table names)
+    let mut visited = vec![];
+
+    visit_relations(&statements, |relation| {
+        visited.push(relation.clone());
+        ControlFlow::<()>::Continue(())
+    });
+
+    for relation in visited.iter() {
+        let (schema_name, relation_name) = if relation.0.len() == 1 {
+            (current_schema.clone(), relation.0[0].to_string())
+        } else if relation.0.len() == 2 {
+            (relation.0[0].to_string(), relation.0[1].to_string())
+        } else {
+            error!(
+                "it is not possible to create a view with more than 2 parts in the relation name"
+            );
+        };
+
+        if !view_exists(&relation_name, &schema_name)? {
+            fallback_warning!(format!(
+                "{schema_name}.{relation_name} does not exist in DuckDB"
+            ));
+            return Ok(true);
+        }
+    }
+    // Push down the view creation query to DuckDB
+    execute(query_string.to_str()?, [])?;
+    Ok(true)
 }
 
 fn explain_query(

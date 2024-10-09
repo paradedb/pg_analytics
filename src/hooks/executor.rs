@@ -28,6 +28,7 @@ use super::query::*;
 #[cfg(debug_assertions)]
 use crate::DEBUG_GUCS;
 
+#[macro_export]
 macro_rules! fallback_warning {
     ($msg:expr) => {
         warning!("This query was not fully pushed down to DuckDB because DuckDB returned an error. Query times may be impacted. If you would like to see this query pushed down, please submit a request to https://github.com/paradedb/paradedb/issues with the following context:\n{}", $msg);
