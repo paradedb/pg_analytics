@@ -16,17 +16,19 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #![allow(clippy::too_many_arguments)]
+#![allow(deprecated)]
+mod explain;
+mod prepare;
 
-use std::ffi::CString;
+use std::ptr::null_mut;
 
 use anyhow::{bail, Result};
-use pg_sys::NodeTag;
-use pgrx::*;
+use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
-use super::query::*;
+use explain::explain_query;
+use prepare::*;
 
-#[allow(deprecated)]
 type ProcessUtilityHook = fn(
     pstmt: PgBox<pg_sys::PlannedStmt>,
     query_string: &core::ffi::CStr,
@@ -66,7 +68,47 @@ pub async fn process_utility_hook(
         return Ok(());
     }
 
+    let parse_state = unsafe {
+        let state = pg_sys::make_parsestate(null_mut());
+        (*state).p_sourcetext = query_string.as_ptr();
+        (*state).p_queryEnv = query_env.as_ptr();
+        state
+    };
+
     let need_exec_prev_hook = match stmt_type {
+        pg_sys::NodeTag::T_PrepareStmt => prepare_query(
+            parse_state,
+            pstmt.utilityStmt as *mut pg_sys::PrepareStmt,
+            pstmt.stmt_location,
+            pstmt.stmt_len,
+        )?,
+
+        pg_sys::NodeTag::T_ExecuteStmt => {
+            let mut query_desc = unsafe {
+                PgBox::<pg_sys::QueryDesc, AllocatedByRust>::from_rust(pg_sys::CreateQueryDesc(
+                    pstmt.as_ptr(),
+                    query_string.as_ptr(),
+                    null_mut(),
+                    null_mut(),
+                    dest.as_ptr(),
+                    null_mut(),
+                    query_env.as_ptr(),
+                    0,
+                ))
+            };
+            query_desc.estate = unsafe { pg_sys::CreateExecutorState() };
+
+            execute_query(
+                parse_state,
+                pstmt.utilityStmt as *mut pg_sys::ExecuteStmt,
+                query_desc,
+            )?
+        }
+
+        pg_sys::NodeTag::T_DeallocateStmt => {
+            deallocate_query(pstmt.utilityStmt as *mut pg_sys::DeallocateStmt)?
+        }
+
         pg_sys::NodeTag::T_ExplainStmt => explain_query(
             query_string,
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
@@ -91,45 +133,11 @@ pub async fn process_utility_hook(
     Ok(())
 }
 
-fn is_support_utility(stmt_type: NodeTag) -> bool {
+fn is_support_utility(stmt_type: pg_sys::NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
-}
-
-fn explain_query(
-    query_string: &core::ffi::CStr,
-    stmt: *mut pg_sys::ExplainStmt,
-    dest: *mut pg_sys::DestReceiver,
-) -> Result<bool> {
-    let query = unsafe { (*stmt).query as *mut pg_sys::Query };
-
-    let query_relations = get_query_relations(unsafe { (*query).rtable });
-    if unsafe { (*query).commandType } != pg_sys::CmdType::CMD_SELECT
-        || !is_duckdb_query(&query_relations)
-    {
-        return Ok(true);
-    }
-
-    if unsafe { !(*stmt).options.is_null() } {
-        error!("the EXPLAIN options provided are not supported for DuckDB pushdown queries.");
-    }
-
-    unsafe {
-        let tstate = pg_sys::begin_tup_output_tupdesc(
-            dest,
-            pg_sys::ExplainResultDesc(stmt),
-            &pg_sys::TTSOpsVirtual,
-        );
-        let query = format!(
-            "DuckDB Scan: {}",
-            parse_query_from_utility_stmt(query_string)?
-        );
-        let query_c_str = CString::new(query)?;
-
-        pg_sys::do_text_output_multiline(tstate, query_c_str.as_ptr());
-        pg_sys::end_tup_output(tstate);
-    }
-
-    Ok(false)
+        || stmt_type == pg_sys::NodeTag::T_PrepareStmt
+        || stmt_type == pg_sys::NodeTag::T_DeallocateStmt
+        || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
 }
 
 fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<String> {
