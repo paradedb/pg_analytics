@@ -136,6 +136,10 @@ pub fn execute_query<T: pgbox::WhoAllocated>(
         #[cfg(feature = "pg17")]
         let need_replan = !pg_sys::SearchPathMatchesCurrentEnvironment((*plan_source).search_path);
 
+        #[cfg(feature = "pg13")]
+        let cached_plan = pg_sys::GetCachedPlan(plan_source, null_mut(), false, null_mut());
+
+        #[cfg(not(feature = "pg13"))]
         let cached_plan = pg_sys::GetCachedPlan(plan_source, null_mut(), null_mut(), null_mut());
         if cached_plan.is_null() || (*cached_plan).stmt_list.is_null() {
             return Ok(true);
