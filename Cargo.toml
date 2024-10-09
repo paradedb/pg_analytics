@@ -1,52 +1,11 @@
-[package]
-name = "pg_analytics"
-description = "Postgres for analytics, powered by DuckDB"
-version = "0.2.0"
-edition = "2021"
-license = "AGPL-3.0"
+[workspace]
+members = ["pg_analytics"]
+resolver = "2"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = ["pg17"]
-pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13"]
-pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
-pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
-pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
-pg17 = ["pgrx/pg17", "pgrx-tests/pg17", "supabase-wrappers/pg17"]
-pg_test = []
-
-[dependencies]
+[workspace.dependencies]
 anyhow = "1.0.88"
 async-std = { version = "1.13.0", features = ["tokio1", "attributes"] }
-chrono = "0.4.38"
-duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
-  "bundled",
-  "extensions-full",
-], rev = "e532dd6" }
-pgrx = "0.12.5"
-serde = "1.0.210"
-serde_json = "1.0.128"
-signal-hook = "0.3.17"
-sqlparser = "0.50.0"
-strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "c32abb7" }
 thiserror = "1.0.63"
-uuid = "1.10.0"
-
-[dev-dependencies]
-aws-config = "1.5.6"
-aws-sdk-s3 = "1.49.0"
-bigdecimal = { version = "0.3.1", features = ["serde"] }
-bytes = "1.7.1"
-datafusion = "37.1.0"
-deltalake = { version = "0.17.3", features = ["datafusion"] }
-futures = "0.3.30"
-pgrx-tests = "0.12.5"
-rstest = "0.19.0"
-serde_arrow = { version = "0.11.7", features = ["arrow-51"] }
-soa_derive = "0.13.0"
 sqlx = { version = "0.7.4", features = [
   "postgres",
   "runtime-async-std",
@@ -55,12 +14,3 @@ sqlx = { version = "0.7.4", features = [
   "uuid",
   "chrono",
 ] }
-tempfile = "3.12.0"
-testcontainers = "0.16.7"
-testcontainers-modules = { version = "0.4.3", features = ["localstack"] }
-time = { version = "0.3.36", features = ["serde"] }
-geojson = "0.24.1"
-
-[[bin]]
-name = "pgrx_embed_pg_analytics"
-path = "src/bin/pgrx_embed.rs"
