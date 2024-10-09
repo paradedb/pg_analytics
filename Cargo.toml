@@ -29,7 +29,7 @@ pgrx = "0.12.5"
 serde = "1.0.210"
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
-sqlparser = "0.50.0"
+sqlparser = { path = "/home/kyss/labs/sqlparser-rs" }
 strum = { version = "0.26.3", features = ["derive"] }
 supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "c32abb7" }
 thiserror = "1.0.63"

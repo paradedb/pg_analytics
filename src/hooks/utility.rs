@@ -17,14 +17,14 @@
 
 #![allow(clippy::too_many_arguments)]
 
-use std::ffi::CString;
+mod explain;
 
 use anyhow::{bail, Result};
 use pg_sys::NodeTag;
 use pgrx::*;
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
 
-use super::query::*;
+use explain::explain_query;
 
 #[allow(deprecated)]
 type ProcessUtilityHook = fn(
@@ -95,43 +95,6 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
 }
 
-fn explain_query(
-    query_string: &core::ffi::CStr,
-    stmt: *mut pg_sys::ExplainStmt,
-    dest: *mut pg_sys::DestReceiver,
-) -> Result<bool> {
-    let query = unsafe { (*stmt).query as *mut pg_sys::Query };
-
-    let query_relations = get_query_relations(unsafe { (*query).rtable });
-    if unsafe { (*query).commandType } != pg_sys::CmdType::CMD_SELECT
-        || !is_duckdb_query(&query_relations)
-    {
-        return Ok(true);
-    }
-
-    if unsafe { !(*stmt).options.is_null() } {
-        error!("the EXPLAIN options provided are not supported for DuckDB pushdown queries.");
-    }
-
-    unsafe {
-        let tstate = pg_sys::begin_tup_output_tupdesc(
-            dest,
-            pg_sys::ExplainResultDesc(stmt),
-            &pg_sys::TTSOpsVirtual,
-        );
-        let query = format!(
-            "DuckDB Scan: {}",
-            parse_query_from_utility_stmt(query_string)?
-        );
-        let query_c_str = CString::new(query)?;
-
-        pg_sys::do_text_output_multiline(tstate, query_c_str.as_ptr());
-        pg_sys::end_tup_output(tstate);
-    }
-
-    Ok(false)
-}
-
 fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<String> {
     let query_string = query_string.to_str()?;
 
@@ -146,6 +109,7 @@ fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<Strin
             verbose: _,
             statement,
             format: _,
+            options: _,
         } => Ok(statement.to_string()),
         _ => bail!("unexpected utility statement: {}", query_string),
     }

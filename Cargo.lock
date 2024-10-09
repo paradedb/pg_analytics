@@ -4028,7 +4028,7 @@ dependencies = [
  "serde_json",
  "signal-hook",
  "soa_derive",
- "sqlparser 0.50.0",
+ "sqlparser 0.51.0",
  "sqlx",
  "strum 0.26.3",
  "supabase-wrappers",
@@ -5405,9 +5405,7 @@ dependencies = [
 
 [[package]]
 name = "sqlparser"
-version = "0.50.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2e5b515a2bd5168426033e9efbfd05500114833916f1d5c268f938b4ee130ac"
+version = "0.51.0"
 dependencies = [
  "log",
 ]
