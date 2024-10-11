@@ -151,7 +151,7 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
 }
 
 fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
-    // if the schema is not set in the query, use the current schema in Postgres by default
+    // Use the current scheme if the schema is not provided in the query.
     let current_schema = get_postgres_current_schema();
     // Set DuckDB search path according search path in Postgres
     set_search_path_by_pg()?;
