@@ -151,7 +151,7 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
 }
 
 fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
-    // Get the current schema in Postgres
+    // if the schema is not set in the query, use the current schema in Postgres by default
     let current_schema = get_postgres_current_schema();
     // Set DuckDB search path according search path in Postgres
     set_search_path_by_pg()?;
@@ -171,12 +171,17 @@ fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
             (current_schema.clone(), relation.0[0].to_string())
         } else if relation.0.len() == 2 {
             (relation.0[0].to_string(), relation.0[1].to_string())
-        } else {
+        } else if relation.0.len() == 3 {
+            // pg_analytics does not create view with database name now
             error!(
-                "it is not possible to create a view with more than 2 parts in the relation name"
+                "pg_analytics does not support creating view with database name: {}",
+                relation.0[0].to_string()
             );
+        } else {
+            bail!("unexpected relation name: {:?}", relation.0);
         };
 
+        // If the table does not exist in DuckDB, do not push down the query to DuckDB
         if !view_exists(&relation_name, &schema_name)? {
             fallback_warning!(format!(
                 "{schema_name}.{relation_name} does not exist in DuckDB"
