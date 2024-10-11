@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // Copyright (c) 2023-2024 Retake, Inc.
 //
 // This file is part of ParadeDB - Postgres for Search and Analytics
@@ -21,7 +19,6 @@
 // We duplicated because the paradedb repo may use a different version of pgrx than pg_analytics, but eventually we should
 // move this into a separate crate without any dependencies on pgrx.
 
-use super::arrow::schema_to_batch;
 use async_std::prelude::Stream;
 use async_std::stream::StreamExt;
 use async_std::task::block_on;
@@ -33,6 +30,8 @@ use sqlx::{
     ConnectOptions, Decode, Executor, FromRow, PgConnection, Postgres, Type,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::arrow::schema_to_batch;
 
 pub struct Db {
     context: TestContext<Postgres>,

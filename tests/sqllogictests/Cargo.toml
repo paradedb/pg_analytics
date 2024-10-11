@@ -1,0 +1,19 @@
+[package]
+name = "paradedb-sqllogictest"
+version = "0.2.0"
+edition = "2021"
+license = "AGPL-3.0"
+
+[lib]
+name = "paradedb_sqllogictest"
+
+[dependencies]
+sqlx = { workspace = true }
+async-std = { workspace = true }
+thiserror = { workspace = true }
+datafusion = { workspace = true }
+bytes = "1.7.1"
+anyhow = { workspace = true }
+pgrx = { workspace = true }
+chrono = { workspace = true }
+bigdecimal = { version = "0.3.1", features = ["serde"] }

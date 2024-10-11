@@ -30,8 +30,8 @@ use std::sync::Arc;
 use tempfile::TempDir;
 
 use crate::fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
-use crate::fixtures::db::Query;
 use crate::fixtures::{conn, tempdir};
+use paradedb_sqllogictest::engine::Query;
 
 pub fn json_string_record_batch() -> Result<RecordBatch> {
     let fields = vec![
