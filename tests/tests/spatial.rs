@@ -19,13 +19,14 @@
 
 mod fixtures;
 
-use crate::fixtures::{arrow::primitive_setup_fdw_local_file_spatial, conn, db::Query, tempdir};
+use crate::fixtures::{arrow::primitive_setup_fdw_local_file_spatial, conn, tempdir};
 use anyhow::Result;
 use datafusion::arrow::array::*;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::cast::as_binary_array;
 use geojson::{Feature, GeoJson, Geometry, Value};
+use paradedb_sqllogictest::engine::Query;
 use rstest::rstest;
 use sqlx::PgConnection;
 

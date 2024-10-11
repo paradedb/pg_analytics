@@ -16,7 +16,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 pub mod arrow;
-pub mod db;
 pub mod tables;
 
 use anyhow::Result;
@@ -48,8 +47,8 @@ use testcontainers_modules::{
     testcontainers::{runners::AsyncRunner, RunnableImage},
 };
 
-use crate::fixtures::db::*;
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
+use paradedb_sqllogictest::engine::*;
 
 #[fixture]
 pub fn database() -> Db {
