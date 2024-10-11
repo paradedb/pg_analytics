@@ -141,7 +141,6 @@ jobs:
             echo "schema_diff_detected=false" >> $GITHUB_OUTPUT
           fi
 
-
       - name: Attach Schema Diff to PR
         uses: actions/github-script@v7
         if: steps.generate_commit_message.outputs.schema_diff_detected == 'true'
@@ -171,4 +170,4 @@ jobs:
                 repo: context.repo.repo,
                 body: process.env.DIFF
               });
-            }  
+            }
