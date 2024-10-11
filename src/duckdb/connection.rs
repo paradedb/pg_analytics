@@ -249,3 +249,21 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
 
     Ok(())
 }
+
+pub fn execute_explain(query: &str) -> Result<String> {
+    let conn = unsafe { &*get_global_connection().get() };
+    let mut stmt = conn.prepare(query)?;
+    let rows = stmt.query_row([], |row| {
+        let mut r = vec![];
+
+        let mut col_index = 1;
+        while let Ok(value) = row.get::<_, String>(col_index) {
+            r.push(value);
+            col_index += 1;
+        }
+
+        Ok(r)
+    })?;
+
+    Ok(rows.join(""))
+}
