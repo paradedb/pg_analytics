@@ -51,12 +51,12 @@ use crate::fixtures::tables::nyc_trips::NycTripsTable;
 use paradedb_sqllogictest::engine::*;
 
 #[fixture]
-pub fn database() -> Db {
-    block_on(async { Db::new().await })
+pub fn database() -> ParadeDB {
+    block_on(async { ParadeDB::new().await })
 }
 
 #[fixture]
-pub fn conn(database: Db) -> PgConnection {
+pub fn conn(database: ParadeDB) -> PgConnection {
     block_on(async {
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")
@@ -68,7 +68,7 @@ pub fn conn(database: Db) -> PgConnection {
 }
 
 #[fixture]
-pub fn conn_with_pg_search(database: Db) -> PgConnection {
+pub fn conn_with_pg_search(database: ParadeDB) -> PgConnection {
     block_on(async {
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")

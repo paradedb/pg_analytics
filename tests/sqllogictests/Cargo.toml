@@ -4,6 +4,10 @@ version = "0.2.0"
 edition = "2021"
 license = "AGPL-3.0"
 
+[features]
+default = ["pg17"]
+pg17 = ["pgrx/pg17"]
+
 [lib]
 name = "paradedb_sqllogictest"
 
@@ -17,3 +21,15 @@ anyhow = { workspace = true }
 pgrx = { workspace = true }
 chrono = { workspace = true }
 bigdecimal = { version = "0.3.1", features = ["serde"] }
+sqllogictest = "0.22.0"
+futures = "0.3.30"
+log = "0.4.14"
+num_cpus = "1.13.0"
+sqlparser = { workspace = true }
+async-trait = "0.1.83"
+
+
+[[bin]]
+harness = false
+name = "sqllogictests"
+path = "bin/sqllogictests.rs"

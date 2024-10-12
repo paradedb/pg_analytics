@@ -22,8 +22,10 @@
 use async_std::prelude::Stream;
 use async_std::stream::StreamExt;
 use async_std::task::block_on;
+use async_trait::async_trait;
 use bytes::Bytes;
 use datafusion::arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
+use sqllogictest::DBOutput;
 use sqlx::{
     postgres::PgRow,
     testing::{TestArgs, TestContext, TestSupport},
@@ -31,13 +33,17 @@ use sqlx::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::arrow::schema_to_batch;
+use crate::error::{DFSqlLogicTestError, Result};
+use crate::{
+    arrow::schema_to_batch,
+    output::{DFColumnType, DFOutput},
+};
 
-pub struct Db {
+pub struct ParadeDB {
     context: TestContext<Postgres>,
 }
 
-impl Db {
+impl ParadeDB {
     pub async fn new() -> Self {
         // Use a timestamp as a unique identifier.
         let path = SystemTime::now()
@@ -63,7 +69,7 @@ impl Db {
     }
 }
 
-impl Drop for Db {
+impl Drop for ParadeDB {
     fn drop(&mut self) {
         let db_name = self.context.db_name.to_string();
         async_std::task::spawn(async move {
@@ -195,3 +201,35 @@ pub trait DisplayAsync: Stream<Item = Result<Bytes, sqlx::Error>> + Sized {
 }
 
 impl<T> DisplayAsync for T where T: Stream<Item = Result<Bytes, sqlx::Error>> + Send + Sized {}
+
+#[async_trait]
+impl sqllogictest::AsyncDB for ParadeDB {
+    type Error = DFSqlLogicTestError;
+    type ColumnType = DFColumnType;
+
+    async fn run(&mut self, sql: &str) -> Result<DBOutput<Self::ColumnType>, Self::Error> {
+        // println!(
+        //     "[{}] Running query: \"{}\"",
+        //     self.relative_path.display(),
+        //     sql
+        // );
+        let mut conn = self.connection().await;
+        run_query(sql, &mut conn).await
+    }
+
+    fn engine_name(&self) -> &str {
+        "ParadeDB"
+    }
+}
+
+async fn run_query(sql: impl Into<String> + Query, conn: &mut PgConnection) -> Result<DFOutput> {
+    let results: Vec<PgRow> = sql.fetch_dynamic(conn);
+    // let rows = normalize::convert_batches(results)?;
+    Ok(DBOutput::StatementComplete(0))
+
+    // if rows.is_empty() && types.is_empty() {
+    //     Ok(DBOutput::StatementComplete(0))
+    // } else {
+    //     Ok(DBOutput::Rows { types, rows })
+    // }
+}
