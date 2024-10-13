@@ -15,13 +15,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
 use std::ffi::CStr;
 use std::str::Utf8Error;
 
 use crate::duckdb::connection;
 use crate::fdw::handler::FdwHandler;
+use crate::schema::cell::*;
+
+macro_rules! fallback_warning {
+    ($msg:expr) => {
+        warning!("This query was not fully pushed down to DuckDB because DuckDB returned an error. Query times may be impacted. If you would like to see this query pushed down, please submit a request to https://github.com/paradedb/pg_analytics/issues with the following context:\n{}", $msg);
+    };
+}
 
 pub fn get_current_query(
     planned_stmt: *mut pg_sys::PlannedStmt,
@@ -120,4 +128,67 @@ pub fn is_duckdb_query(relations: &[PgRelation]) -> bool {
                 false
             }
         })
+}
+
+#[inline]
+pub fn write_batches_to_slots<T: WhoAllocated>(
+    query_desc: PgBox<pg_sys::QueryDesc, T>,
+    mut batches: Vec<RecordBatch>,
+) -> Result<()> {
+    // Convert the DataFusion batches to Postgres tuples and send them to the destination
+    unsafe {
+        let tuple_desc = PgTupleDesc::from_pg(query_desc.tupDesc);
+        let estate = query_desc.estate;
+        (*estate).es_processed = 0;
+
+        let dest = query_desc.dest;
+        let startup = (*dest)
+            .rStartup
+            .ok_or_else(|| anyhow!("rStartup not found"))?;
+        startup(dest, query_desc.operation as i32, query_desc.tupDesc);
+
+        let receive = (*dest)
+            .receiveSlot
+            .ok_or_else(|| anyhow!("receiveSlot not found"))?;
+
+        for batch in batches.iter_mut() {
+            for row_index in 0..batch.num_rows() {
+                let tuple_table_slot =
+                    pg_sys::MakeTupleTableSlot(query_desc.tupDesc, &pg_sys::TTSOpsVirtual);
+
+                pg_sys::ExecStoreVirtualTuple(tuple_table_slot);
+
+                for (col_index, _) in tuple_desc.iter().enumerate() {
+                    let attribute = tuple_desc
+                        .get(col_index)
+                        .ok_or_else(|| anyhow!("attribute at {col_index} not found in tupdesc"))?;
+                    let column = batch.column(col_index);
+                    let tts_value = (*tuple_table_slot).tts_values.add(col_index);
+                    let tts_isnull = (*tuple_table_slot).tts_isnull.add(col_index);
+
+                    match column.get_cell(row_index, attribute.atttypid, attribute.name())? {
+                        Some(cell) => {
+                            if let Some(datum) = cell.into_datum() {
+                                *tts_value = datum;
+                            }
+                        }
+                        None => {
+                            *tts_isnull = true;
+                        }
+                    };
+                }
+
+                receive(tuple_table_slot, dest);
+                (*estate).es_processed += 1;
+                pg_sys::ExecDropSingleTupleTableSlot(tuple_table_slot);
+            }
+        }
+
+        let shutdown = (*dest)
+            .rShutdown
+            .ok_or_else(|| anyhow!("rShutdown not found"))?;
+        shutdown(dest);
+    }
+
+    Ok(())
 }

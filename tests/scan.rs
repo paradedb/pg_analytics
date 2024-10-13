@@ -20,8 +20,9 @@ mod fixtures;
 use crate::fixtures::arrow::{
     delta_primitive_record_batch, primitive_create_foreign_data_wrapper, primitive_create_server,
     primitive_create_table, primitive_create_user_mapping_options, primitive_record_batch,
-    primitive_setup_fdw_local_file_delta, primitive_setup_fdw_local_file_listing,
-    primitive_setup_fdw_s3_delta, primitive_setup_fdw_s3_listing,
+    primitive_record_batch_single, primitive_setup_fdw_local_file_delta,
+    primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
+    primitive_setup_fdw_s3_listing, setup_parquet_wrapper_and_server,
 };
 use crate::fixtures::db::Query;
 use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
@@ -554,6 +555,97 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     let ret =
         "SELECT * FROM t1 LEFT JOIN t2 ON true LEFT JOIN t3 on true".execute_result(&mut conn);
     assert!(ret.is_ok(), "{:?}", ret);
+
+    Ok(())
+}
+
+#[rstest]
+async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
+    NycTripsTable::setup().execute(&mut conn);
+    let rows: Vec<NycTripsTable> = "SELECT * FROM nyc_trips".fetch(&mut conn);
+    s3.client
+        .create_bucket()
+        .bucket(S3_TRIPS_BUCKET)
+        .send()
+        .await?;
+    s3.create_bucket(S3_TRIPS_BUCKET).await?;
+    s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
+
+    NycTripsTable::setup_s3_listing_fdw(
+        &s3.url.clone(),
+        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
+    )
+    .execute(&mut conn);
+
+    r#"PREPARE test_query(int) AS SELECT count(*) FROM trips WHERE "VendorID" = $1;"#
+        .execute(&mut conn);
+
+    let count: (i64,) = "EXECUTE test_query(1)".fetch_one(&mut conn);
+    assert_eq!(count.0, 39);
+
+    let count: (i64,) = "EXECUTE test_query(3)".fetch_one(&mut conn);
+    assert_eq!(count.0, 0);
+
+    "DEALLOCATE test_query".execute(&mut conn);
+
+    assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
+
+    Ok(())
+}
+
+// Note: PostgreSQL will replan the query when certain catalog changes occur,
+// such as changes to the search path or when a table is deleted.
+// In contrast, DuckDB does not replan when the search path is changed.
+// If there are two foreign tables in different schemas and the prepared statements do not specify the schemas,
+// it may lead to ambiguity or errors when referencing the tables.
+#[rstest]
+async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    let stored_batch_less = primitive_record_batch_single()?;
+    let less_parquet_path = tempdir.path().join("test_arrow_types_less.parquet");
+    let less_parquet_file = File::create(&less_parquet_path)?;
+
+    let mut writer =
+        ArrowWriter::try_new(less_parquet_file, stored_batch_less.schema(), None).unwrap();
+    writer.write(&stored_batch_less)?;
+    writer.close()?;
+
+    // In this example, we create two tables with identical structures and names, but in different schemas.
+    // We expect that when the search path is changed, the correct table (the one in the current schema) will be referenced in DuckDB.
+    "CREATE SCHEMA tpch1".execute(&mut conn);
+    "CREATE SCHEMA tpch2".execute(&mut conn);
+
+    setup_parquet_wrapper_and_server().execute(&mut conn);
+
+    let file_path = parquet_path.as_path().to_str().unwrap();
+    let file_less_path = less_parquet_path.as_path().to_str().unwrap();
+
+    let create_table_t1 = primitive_create_table("parquet_server", "tpch1.t1");
+    (&format!("{create_table_t1} OPTIONS (files '{file_path}');")).execute(&mut conn);
+
+    let create_table_less_t1 = primitive_create_table("parquet_server", "tpch2.t1");
+    (&format!("{create_table_less_t1} OPTIONS (files '{file_less_path}');")).execute(&mut conn);
+
+    "SET search_path TO tpch1".execute(&mut conn);
+
+    "PREPARE q1 AS SELECT * FROM t1 WHERE boolean_col = $1".execute(&mut conn);
+
+    let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
+    assert_eq!(result.len(), 2);
+
+    "SET search_path TO tpch2".execute(&mut conn);
+    let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
+    assert_eq!(result.len(), 1);
+
+    "DEALLOCATE q1".execute(&mut conn);
+    assert!("EXECUTE q1(true)".execute_result(&mut conn).is_err());
 
     Ok(())
 }
