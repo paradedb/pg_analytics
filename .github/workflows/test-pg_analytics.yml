@@ -160,4 +160,5 @@ jobs:
           echo ""
           echo "Running sqllogictest..."
           cd tests/sqllogictests
+          export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           cargo test --test sqllogictests --features pg${{ matrix.pg_version }}
