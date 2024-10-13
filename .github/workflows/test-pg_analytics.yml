@@ -153,3 +153,11 @@ jobs:
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           export RUST_BACKTRACE=1
           cargo test --package tests --features "pg${{ matrix.pg_version }}" --no-default-features
+          cargo pgrx test "pg${{ matrix.pg_version }}"
+      - name: Run sqllogictest
+        if: steps.check_skip.outputs.skip_remaining_steps != 'true'
+        run: |
+          echo ""
+          echo "Running sqllogictest..."
+          cd tests/sqllogictests
+          cargo test --test sqllogictests --features pg${{ matrix.pg_version }}
