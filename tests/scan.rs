@@ -644,5 +644,8 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
     let result: Vec<(bool,)> = "EXECUTE q1(true)".fetch_collect(&mut conn);
     assert_eq!(result.len(), 1);
 
+    "DEALLOCATE q1".execute(&mut conn);
+    assert!("EXECUTE q1(true)".execute_result(&mut conn).is_err());
+
     Ok(())
 }
