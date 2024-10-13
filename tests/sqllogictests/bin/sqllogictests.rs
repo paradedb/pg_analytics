@@ -1,3 +1,20 @@
+// Copyright (c) 2023-2024 Retake, Inc.
+//
+// This file is part of ParadeDB - Postgres for Search and Analytics
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 use std::{
     ffi::OsStr,
     fs,
@@ -5,7 +22,7 @@ use std::{
 };
 
 use anyhow::Result;
-use async_std::task::{self, block_on};
+use async_std::task::block_on;
 use datafusion::common::runtime::SpawnedTask;
 use futures::StreamExt;
 use log::info;
@@ -20,17 +37,7 @@ pub fn main() -> Result<()> {
 }
 
 async fn run_tests() -> Result<()> {
-    // Enable logging (e.g. set RUST_LOG=debug to see debug logs)
-    // env_logger::init();
-
-    // let options: Options = clap::Parser::parse();
-    // options.warn_on_ignored();
-
     // Run all tests in parallel, reporting failures at the end
-    //
-    // Doing so is safe because each slt file runs with its own
-    // `SessionContext` and should not have side effects (like
-    // modifying shared state like `/tmp/`)
     let errors: Vec<_> = futures::stream::iter(read_test_files()?)
         .map(|test_file| {
             SpawnedTask::spawn(async move {
@@ -109,11 +116,6 @@ async fn run_test_file(test_file: TestFile) -> Result<()> {
         relative_path,
     } = test_file;
     info!("Running with ParadeDB runner: {}", path.display());
-
-    // let Some(test_ctx) = TestContext::try_new_for_test_file(&relative_path).await else {
-    //     info!("Skipping: {}", path.display());
-    //     return Ok(());
-    // };
 
     setup_scratch_dir(&relative_path)?;
     let mut runner = sqllogictest::Runner::new(|| async { Ok(ParadeDB::new().await) });

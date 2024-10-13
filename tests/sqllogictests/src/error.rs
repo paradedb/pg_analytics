@@ -1,13 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
 // Copyright (c) 2023-2024 Retake, Inc.
 //
 // This file is part of ParadeDB - Postgres for Search and Analytics
@@ -25,12 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// TECH DEBT: This file is a copy of the `db.rs` file from https://github.com/paradedb/paradedb/blob/dev/shared/src/fixtures/db.rs
-// We duplicated because the paradedb repo may use a different version of pgrx than pg_analytics, but eventually we should
-// move this into a separate crate without any dependencies on pgrx.
-
 use datafusion::arrow::error::ArrowError;
-// use datafusion_common::DataFusionError;
 use sqllogictest::TestError;
 use sqlparser::parser::ParserError;
 use thiserror::Error;
@@ -40,6 +25,9 @@ pub type Result<T, E = DFSqlLogicTestError> = std::result::Result<T, E>;
 /// DataFusion sql-logicaltest error
 #[derive(Debug, Error)]
 pub enum DFSqlLogicTestError {
+    /// Error from sqlx
+    #[error("Postgres error(from sqlx crate): {0}")]
+    Sqlx(#[from] sqlx::Error),
     /// Error from sqllogictest-rs
     #[error("SqlLogicTest error(from sqllogictest-rs crate): {0}")]
     SqlLogicTest(#[from] TestError),

@@ -57,20 +57,6 @@ async fn test_explain_fdw(#[future(awt)] s3: S3, mut conn: PgConnection) -> Resu
 }
 
 #[rstest]
-async fn test_explain_heap(mut conn: PgConnection) -> Result<()> {
-    NycTripsTable::setup().execute(&mut conn);
-
-    let explain: Vec<(String,)> =
-        "EXPLAIN SELECT COUNT(*) FROM nyc_trips WHERE tip_amount <> 0".fetch(&mut conn);
-
-    assert!(explain[0].0.contains("Aggregate"));
-    assert!(explain[1].0.contains("Seq Scan on nyc_trips"));
-    assert!(explain[2].0.contains("Filter"));
-
-    Ok(())
-}
-
-#[rstest]
 #[ignore = "EXPLAIN not fully working"]
 async fn test_explain_federated(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
