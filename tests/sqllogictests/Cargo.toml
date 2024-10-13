@@ -6,7 +6,12 @@ license = "AGPL-3.0"
 
 [features]
 default = ["pg17"]
+pg13 = ["pgrx/pg13"]
+pg14 = ["pgrx/pg14"]
+pg15 = ["pgrx/pg15"]
+pg16 = ["pgrx/pg16"]
 pg17 = ["pgrx/pg17"]
+
 
 [lib]
 name = "paradedb_sqllogictest"
@@ -28,8 +33,7 @@ num_cpus = "1.13.0"
 sqlparser = { workspace = true }
 async-trait = "0.1.83"
 
-
-[[bin]]
+[[test]]
 harness = false
 name = "sqllogictests"
 path = "bin/sqllogictests.rs"
