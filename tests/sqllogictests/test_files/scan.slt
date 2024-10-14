@@ -1,0 +1,46 @@
+# Copyright (c) 2023-2024 Retake, Inc.
+#
+# This file is part of ParadeDB - Postgres for Search and Analytics
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+#######
+# Load the pg_analytics extension
+#######
+statement ok
+DROP EXTENSION IF EXISTS pg_analytics CASCADE;
+
+statement ok
+CREATE EXTENSION pg_analytics;
+
+#######
+# Load the FDW for Parquet
+#######
+
+statement ok
+CREATE FOREIGN DATA WRAPPER parquet_wrapper
+HANDLER parquet_fdw_handler VALIDATOR parquet_fdw_validator;
+
+statement ok
+CREATE SERVER parquet_server FOREIGN DATA WRAPPER parquet_wrapper;
+
+statement ok
+CREATE FOREIGN TABLE trips ()
+SERVER parquet_server
+OPTIONS (files 's3://paradedb-benchmarks/yellow_tripdata_2024-01.parquet');
+
+query IIF
+SELECT vendorid, passenger_count, trip_distance FROM trips LIMIT 1;
+----
+2 1 1.72

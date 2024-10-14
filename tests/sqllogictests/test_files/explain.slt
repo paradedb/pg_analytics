@@ -24,7 +24,6 @@ DROP EXTENSION IF EXISTS pg_analytics CASCADE;
 statement ok
 CREATE EXTENSION pg_analytics;
 
-
 #######
 # Setup test data table
 #######
