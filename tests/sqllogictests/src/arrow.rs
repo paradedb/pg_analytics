@@ -15,10 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// TECH DEBT: This file is a copy of the `db.rs` file from https://github.com/paradedb/paradedb/blob/dev/shared/src/fixtures/db.rs
-// We duplicated because the paradedb repo may use a different version of pgrx than pg_analytics, but eventually we should
-// move this into a separate crate without any dependencies on pgrx.
-
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
