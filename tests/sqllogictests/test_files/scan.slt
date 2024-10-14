@@ -40,7 +40,7 @@ CREATE FOREIGN TABLE trips ()
 SERVER parquet_server
 OPTIONS (files 's3://paradedb-benchmarks/yellow_tripdata_2024-01.parquet');
 
-query IIF
+query IIR
 SELECT vendorid, passenger_count, trip_distance FROM trips LIMIT 1;
 ----
 2 1 1.72
