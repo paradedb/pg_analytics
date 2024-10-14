@@ -143,6 +143,7 @@ pub async fn process_utility_hook(
 fn is_support_utility(stmt_type: NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
         || stmt_type == pg_sys::NodeTag::T_ViewStmt
+        || stmt_type == pg_sys::NodeTag::T_PrepareStmt
         || stmt_type == pg_sys::NodeTag::T_DeallocateStmt
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
 }
