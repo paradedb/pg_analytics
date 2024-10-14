@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 // Copyright (c) 2023-2024 Retake, Inc.
 //
 // This file is part of ParadeDB - Postgres for Search and Analytics
@@ -21,12 +19,16 @@
 // We duplicated because the paradedb repo may use a different version of pgrx than pg_analytics, but eventually we should
 // move this into a separate crate without any dependencies on pgrx.
 
-use super::arrow::schema_to_batch;
+use crate::normalize::convert_rows;
+use crate::normalize::convert_types;
 use async_std::prelude::Stream;
 use async_std::stream::StreamExt;
 use async_std::task::block_on;
+use async_trait::async_trait;
 use bytes::Bytes;
 use datafusion::arrow::{datatypes::SchemaRef, record_batch::RecordBatch};
+use sqllogictest::DBOutput;
+use sqlx::Row;
 use sqlx::{
     postgres::PgRow,
     testing::{TestArgs, TestContext, TestSupport},
@@ -34,11 +36,17 @@ use sqlx::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub struct Db {
+use crate::error::{DFSqlLogicTestError, Result};
+use crate::{
+    arrow::schema_to_batch,
+    output::{DFColumnType, DFOutput},
+};
+
+pub struct ParadeDB {
     context: TestContext<Postgres>,
 }
 
-impl Db {
+impl ParadeDB {
     pub async fn new() -> Self {
         // Use a timestamp as a unique identifier.
         let path = SystemTime::now()
@@ -64,7 +72,7 @@ impl Db {
     }
 }
 
-impl Drop for Db {
+impl Drop for ParadeDB {
     fn drop(&mut self) {
         let db_name = self.context.db_name.to_string();
         async_std::task::spawn(async move {
@@ -107,6 +115,13 @@ where
                 .await
                 .unwrap_or_else(|_| panic!("error in query '{}'", self.as_ref()))
         })
+    }
+
+    fn fetch_dynamic_result(
+        self,
+        connection: &mut PgConnection,
+    ) -> Result<Vec<PgRow>, sqlx::Error> {
+        block_on(async { sqlx::query(self.as_ref()).fetch_all(connection).await })
     }
 
     /// A convenient helper for processing PgRow results from Postgres into a DataFusion RecordBatch.
@@ -196,3 +211,35 @@ pub trait DisplayAsync: Stream<Item = Result<Bytes, sqlx::Error>> + Sized {
 }
 
 impl<T> DisplayAsync for T where T: Stream<Item = Result<Bytes, sqlx::Error>> + Send + Sized {}
+
+#[async_trait]
+impl sqllogictest::AsyncDB for ParadeDB {
+    type Error = DFSqlLogicTestError;
+    type ColumnType = DFColumnType;
+
+    async fn run(&mut self, sql: &str) -> Result<DBOutput<Self::ColumnType>, Self::Error> {
+        let mut conn = self.connection().await;
+        run_query(sql, &mut conn).await
+    }
+
+    fn engine_name(&self) -> &str {
+        "ParadeDB"
+    }
+}
+
+async fn run_query(sql: impl Into<String> + Query, conn: &mut PgConnection) -> Result<DFOutput> {
+    let results: Vec<PgRow> = sql.fetch_dynamic_result(conn)?;
+
+    let rows = convert_rows(&results);
+    let types = if rows.is_empty() {
+        vec![]
+    } else {
+        convert_types(results[0].columns())
+    };
+
+    if rows.is_empty() && types.is_empty() {
+        Ok(DBOutput::StatementComplete(0))
+    } else {
+        Ok(DBOutput::Rows { types, rows })
+    }
+}
