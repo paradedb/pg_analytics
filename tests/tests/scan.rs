@@ -559,7 +559,6 @@ async fn test_executor_hook_search_path(mut conn: PgConnection, tempdir: TempDir
     Ok(())
 }
 
-
 #[rstest]
 async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection) -> Result<()> {
     NycTripsTable::setup().execute(&mut conn);
@@ -572,9 +571,11 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
     s3.create_bucket(S3_TRIPS_BUCKET).await?;
     s3.put_rows(S3_TRIPS_BUCKET, S3_TRIPS_KEY, &rows).await?;
 
-    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
-    writer.write(&stored_batch)?;
-    writer.close()?;
+    NycTripsTable::setup_s3_listing_fdw(
+        &s3.url.clone(),
+        &format!("s3://{S3_TRIPS_BUCKET}/{S3_TRIPS_KEY}"),
+    )
+    .execute(&mut conn);
 
     r#"PREPARE test_query(int) AS SELECT count(*) FROM trips WHERE "VendorID" = $1;"#
         .execute(&mut conn);
@@ -589,19 +590,6 @@ async fn test_prepare_stmt_execute(#[future(awt)] s3: S3, mut conn: PgConnection
 
     assert!("EXECUTE test_query(3)".execute_result(&mut conn).is_err());
 
-    // cannot fully pushdown to the DuckDB
-    "CREATE TABLE t1 (a int);".execute(&mut conn);
-    "INSERT INTO t1 VALUES (1);".execute(&mut conn);
-    r#"
-    CREATE VIEW primitive_join_view AS
-    SELECT *
-    FROM primitive
-    JOIN t1 ON t1.a = primitive.int32_col
-    "#
-    .execute(&mut conn);
-
-    let res: (i32,) = "SELECT int32_col FROM primitive_join_view".fetch_one(&mut conn);
-    assert_eq!(res.0, 1);
     Ok(())
 }
 
