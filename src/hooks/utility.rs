@@ -19,22 +19,19 @@
 #![allow(deprecated)]
 mod explain;
 mod prepare;
+mod view;
 
 use std::ptr::null_mut;
 
 use anyhow::{bail, Result};
 use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
-use std::ops::ControlFlow;
+use view::view_query;
 
 use pg_sys::NodeTag;
-use pgrx::*;
-use sqlparser::ast::visit_relations;
 
 use explain::explain_query;
 use prepare::*;
-
-use crate::duckdb::connection::{execute, view_exists};
 
 use super::query::*;
 
@@ -148,50 +145,6 @@ fn is_support_utility(stmt_type: NodeTag) -> bool {
         || stmt_type == pg_sys::NodeTag::T_ViewStmt
         || stmt_type == pg_sys::NodeTag::T_DeallocateStmt
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
-}
-
-fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
-    // Use the current scheme if the schema is not provided in the query.
-    let current_schema = get_postgres_current_schema();
-    // Set DuckDB search path according search path in Postgres
-    set_search_path_by_pg()?;
-
-    let dialect = PostgreSqlDialect {};
-    let statements = Parser::parse_sql(&dialect, query_string.to_str()?)?;
-    // visit statements, capturing relations (table names)
-    let mut visited = vec![];
-
-    visit_relations(&statements, |relation| {
-        visited.push(relation.clone());
-        ControlFlow::<()>::Continue(())
-    });
-
-    for relation in visited.iter() {
-        let (schema_name, relation_name) = if relation.0.len() == 1 {
-            (current_schema.clone(), relation.0[0].to_string())
-        } else if relation.0.len() == 2 {
-            (relation.0[0].to_string(), relation.0[1].to_string())
-        } else if relation.0.len() == 3 {
-            // pg_analytics does not create view with database name now
-            error!(
-                "pg_analytics does not support creating view with database name: {}",
-                relation.0[0].to_string()
-            );
-        } else {
-            bail!("unexpected relation name: {:?}", relation.0);
-        };
-
-        // If the table does not exist in DuckDB, do not push down the query to DuckDB
-        if !view_exists(&relation_name, &schema_name)? {
-            fallback_warning!(format!(
-                "{schema_name}.{relation_name} does not exist in DuckDB"
-            ));
-            return Ok(true);
-        }
-    }
-    // Push down the view creation query to DuckDB
-    execute(query_string.to_str()?, [])?;
-    Ok(true)
 }
 
 fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<String> {
