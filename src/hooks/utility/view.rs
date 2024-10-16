@@ -17,7 +17,6 @@
 
 use anyhow::Result;
 use pg_sys::{get_relname_relid, RangeVarGetCreationNamespace};
-use std::ffi::CStr;
 
 use pgrx::*;
 
@@ -26,21 +25,20 @@ use crate::{duckdb::connection::execute, hooks::query::is_duckdb_query};
 use super::set_search_path_by_pg;
 
 pub fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
-    if analyze_query(stmt)? {
+    let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
+    let from_clause = unsafe { (*query).fromClause };
+
+    if analyze_from_clause(from_clause)? {
         // Push down the view creation query to DuckDB
         set_search_path_by_pg()?;
         execute(query_string.to_str()?, [])?;
+    } else {
+        fallback_warning!("relation is not a foreign table from DuckDB");
     }
     Ok(true)
 }
 
-fn analyze_query(stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
-    let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
-    let from_clause = unsafe { (*query).fromClause };
-
-    analyze_from_clause(from_clause)
-}
-
+/// Analyze the from clause to find the RangeVar node to check if it's a DuckDB query
 fn analyze_from_clause(from_clause: *mut pg_sys::List) -> Result<bool> {
     unsafe {
         let elements = (*from_clause).elements;
@@ -61,15 +59,11 @@ fn analyze_from_clause(from_clause: *mut pg_sys::List) -> Result<bool> {
     Ok(false)
 }
 
+/// Check if the RangeVar is a DuckDB query
 fn analyze_range_var(rv: *mut pg_sys::RangeVar) -> Result<bool> {
     let pg_relation = unsafe {
         let schema_id = RangeVarGetCreationNamespace(rv);
         let relid = get_relname_relid((*rv).relname, schema_id);
-
-        pgrx::warning!(
-            "Relation table name: {:?}",
-            CStr::from_ptr((*rv).relname).to_str()
-        );
 
         let relation = pg_sys::RelationIdGetRelation(relid);
         PgRelation::from_pg_owned(relation)
@@ -78,9 +72,8 @@ fn analyze_range_var(rv: *mut pg_sys::RangeVar) -> Result<bool> {
     Ok(is_duckdb_query(&[pg_relation]))
 }
 
+/// Check if the JoinExpr is a DuckDB query
 fn analyze_join_expr(join_expr: *mut pg_sys::JoinExpr) -> Result<bool> {
-    pgrx::warning!("Analyzing JoinExpr");
-
     unsafe {
         let ltree = (*join_expr).larg;
         let rtree = (*join_expr).rarg;
@@ -89,6 +82,7 @@ fn analyze_join_expr(join_expr: *mut pg_sys::JoinExpr) -> Result<bool> {
     }
 }
 
+/// Analyze the tree recursively to find the RangeVar node to check if it's a DuckDB query
 fn analyze_tree(mut tree: *mut pg_sys::Node) -> Result<bool> {
     while !tree.is_null() {
         unsafe {
