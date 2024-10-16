@@ -15,57 +15,93 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-use anyhow::{bail, Result};
-use sqlparser::{dialect::PostgreSqlDialect, parser::Parser};
-use std::ops::ControlFlow;
+use anyhow::Result;
+use pg_sys::{get_relname_relid, RangeVarGetCreationNamespace};
+use std::ffi::CStr;
 
 use pgrx::*;
-use sqlparser::ast::visit_relations;
 
-use crate::duckdb::connection::{execute, view_exists};
+use crate::{duckdb::connection::execute, hooks::query::is_duckdb_query};
 
-use super::{get_postgres_current_schema, set_search_path_by_pg};
+use super::set_search_path_by_pg;
 
-pub fn view_query(query_string: &core::ffi::CStr) -> Result<bool> {
-    // Use the current scheme if the schema is not provided in the query.
-    let current_schema = get_postgres_current_schema();
-    // Set DuckDB search path according search path in Postgres
-    set_search_path_by_pg()?;
+pub fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
+    if analyze_query(stmt)? {
+        // Push down the view creation query to DuckDB
+        set_search_path_by_pg()?;
+        execute(query_string.to_str()?, [])?;
+    }
+    Ok(true)
+}
 
-    let dialect = PostgreSqlDialect {};
-    let statements = Parser::parse_sql(&dialect, query_string.to_str()?)?;
-    // visit statements, capturing relations (table names)
-    let mut visited = vec![];
+fn analyze_query(stmt: *mut pg_sys::ViewStmt) -> Result<bool> {
+    let query = unsafe { (*stmt).query as *mut pg_sys::SelectStmt };
+    let from_clause = unsafe { (*query).fromClause };
 
-    visit_relations(&statements, |relation| {
-        visited.push(relation.clone());
-        ControlFlow::<()>::Continue(())
-    });
+    analyze_from_clause(from_clause)
+}
 
-    for relation in visited.iter() {
-        let (schema_name, relation_name) = if relation.0.len() == 1 {
-            (current_schema.clone(), relation.0[0].to_string())
-        } else if relation.0.len() == 2 {
-            (relation.0[0].to_string(), relation.0[1].to_string())
-        } else if relation.0.len() == 3 {
-            // pg_analytics does not create view with database name now
-            error!(
-                "pg_analytics does not support creating view with database name: {}",
-                relation.0[0].to_string()
-            );
-        } else {
-            bail!("unexpected relation name: {:?}", relation.0);
-        };
+fn analyze_from_clause(from_clause: *mut pg_sys::List) -> Result<bool> {
+    unsafe {
+        let elements = (*from_clause).elements;
+        for i in 0..(*from_clause).length {
+            let element = (*elements.offset(i as isize)).ptr_value as *mut pg_sys::Node;
 
-        // If the table does not exist in DuckDB, do not push down the query to DuckDB
-        if !view_exists(&relation_name, &schema_name)? {
-            fallback_warning!(format!(
-                "{schema_name}.{relation_name} does not exist in DuckDB"
-            ));
-            return Ok(true);
+            match (*element).type_ {
+                pg_sys::NodeTag::T_RangeVar => {
+                    return analyze_range_var(element as *mut pg_sys::RangeVar);
+                }
+                pg_sys::NodeTag::T_JoinExpr => {
+                    return analyze_join_expr(element as *mut pg_sys::JoinExpr);
+                }
+                _ => continue,
+            }
         }
     }
-    // Push down the view creation query to DuckDB
-    execute(query_string.to_str()?, [])?;
+    Ok(false)
+}
+
+fn analyze_range_var(rv: *mut pg_sys::RangeVar) -> Result<bool> {
+    let pg_relation = unsafe {
+        let schema_id = RangeVarGetCreationNamespace(rv);
+        let relid = get_relname_relid((*rv).relname, schema_id);
+
+        pgrx::warning!(
+            "Relation table name: {:?}",
+            CStr::from_ptr((*rv).relname).to_str()
+        );
+
+        let relation = pg_sys::RelationIdGetRelation(relid);
+        PgRelation::from_pg_owned(relation)
+    };
+
+    Ok(is_duckdb_query(&[pg_relation]))
+}
+
+fn analyze_join_expr(join_expr: *mut pg_sys::JoinExpr) -> Result<bool> {
+    pgrx::warning!("Analyzing JoinExpr");
+
+    unsafe {
+        let ltree = (*join_expr).larg;
+        let rtree = (*join_expr).rarg;
+
+        Ok(analyze_tree(ltree)? && analyze_tree(rtree)?)
+    }
+}
+
+fn analyze_tree(mut tree: *mut pg_sys::Node) -> Result<bool> {
+    while !tree.is_null() {
+        unsafe {
+            match (*tree).type_ {
+                pg_sys::NodeTag::T_RangeVar => {
+                    return analyze_range_var(tree as *mut pg_sys::RangeVar);
+                }
+                pg_sys::NodeTag::T_JoinExpr => {
+                    tree = (*(tree as *mut pg_sys::JoinExpr)).larg;
+                }
+                _ => break,
+            }
+        }
+    }
     Ok(true)
 }
