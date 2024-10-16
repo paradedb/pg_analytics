@@ -28,7 +28,7 @@ concurrency:
 jobs:
   check-pg_analytics-schema-upgrade:
     name: Post Schema Change to PR
-    runs-on: depot-ubuntu-latest-8
+    runs-on: ubicloud-standard-8
     if: github.event.pull_request.draft == false
     env:
       pg_version: 13 # Required by pg-schema-diff
@@ -45,7 +45,7 @@ jobs:
       # Caches from base branches are available to PRs, but not across unrelated branches, so we only
       # save the cache on the 'dev' branch, but load it on all branches.
       - name: Install Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: ubicloud/rust-cache@v2
         with:
           prefix-key: "v1"
           shared-key: ${{ runner.os }}-rust-cache-pg_analytics-${{ HashFiles('Cargo.lock') }}
