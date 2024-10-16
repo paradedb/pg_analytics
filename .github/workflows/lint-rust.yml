@@ -21,7 +21,7 @@ concurrency:
 jobs:
   lint-rust:
     name: Lint Rust Files
-    runs-on: depot-ubuntu-latest-2
+    runs-on: ubicloud-standard-2
     if: github.event.pull_request.draft == false
     strategy:
       matrix:
@@ -37,7 +37,7 @@ jobs:
       # Caches from base branches are available to PRs, but not across unrelated branches, so we only
       # save the cache on the 'dev' branch, but load it on all branches.
       - name: Install Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: ubicloud/rust-cache@v2
         with:
           prefix-key: "v1"
           shared-key: ${{ runner.os }}-rust-cache-pg_analytics-${{ HashFiles('Cargo.lock') }}

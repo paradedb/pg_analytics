@@ -19,7 +19,7 @@ concurrency:
 jobs:
   publish-github-release:
     name: Publish ParadeDB pg_analytics GitHub Release
-    runs-on: depot-ubuntu-latest-2
+    runs-on: ubicloud-standard-2
 
     steps:
       - name: Checkout Git Repository
