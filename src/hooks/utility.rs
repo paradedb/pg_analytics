@@ -120,7 +120,9 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
-        pg_sys::NodeTag::T_ViewStmt => view_query(query_string)?,
+        pg_sys::NodeTag::T_ViewStmt => {
+            view_query(query_string, pstmt.utilityStmt as *mut pg_sys::ViewStmt)?
+        }
         _ => bail!("unexpected statement type in utility hook"),
     };
 
