@@ -116,30 +116,6 @@ fn get_postgres_search_path() -> Vec<String> {
     schema_vec
 }
 
-pub fn get_postgres_current_schema() -> String {
-    let active_schemas =
-        unsafe { PgList::<pg_sys::Oid>::from_pg(pg_sys::fetch_search_path(false)) };
-
-    let schema_oid = active_schemas.get_oid(0).unwrap();
-
-    let mut current_schema = String::new();
-    let tuple = unsafe {
-        pg_sys::SearchSysCache1(
-            pg_sys::SysCacheIdentifier::NAMESPACEOID as i32,
-            schema_oid.into_datum().unwrap(),
-        )
-    };
-
-    if !tuple.is_null() {
-        let pg_namespace = unsafe { pg_sys::GETSTRUCT(tuple) as pg_sys::Form_pg_namespace };
-        let name = pg_sys::name_data_to_str(unsafe { &(*pg_namespace).nspname });
-        current_schema = name.to_string();
-
-        unsafe { pg_sys::ReleaseSysCache(tuple) };
-    }
-    current_schema
-}
-
 pub fn is_duckdb_query(relations: &[PgRelation]) -> bool {
     !relations.is_empty()
         && relations.iter().all(|pg_relation| {
