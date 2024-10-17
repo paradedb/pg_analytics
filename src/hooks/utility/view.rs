@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+use std::ffi::CStr;
+
 use anyhow::Result;
 use pg_sys::{get_relname_relid, RangeVarGetCreationNamespace};
 
@@ -32,9 +34,8 @@ pub fn view_query(query_string: &core::ffi::CStr, stmt: *mut pg_sys::ViewStmt) -
         // Push down the view creation query to DuckDB
         set_search_path_by_pg()?;
         execute(query_string.to_str()?, [])?;
-    } else {
-        fallback_warning!("relation is not a foreign table from DuckDB");
     }
+
     Ok(true)
 }
 
@@ -61,15 +62,26 @@ fn analyze_from_clause(from_clause: *mut pg_sys::List) -> Result<bool> {
 
 /// Check if the RangeVar is a DuckDB query
 fn analyze_range_var(rv: *mut pg_sys::RangeVar) -> Result<bool> {
-    let pg_relation = unsafe {
+    let (pg_relation, rel_name) = unsafe {
         let schema_id = RangeVarGetCreationNamespace(rv);
         let relid = get_relname_relid((*rv).relname, schema_id);
 
         let relation = pg_sys::RelationIdGetRelation(relid);
-        PgRelation::from_pg_owned(relation)
+        (
+            PgRelation::from_pg_owned(relation),
+            CStr::from_ptr((*rv).relname),
+        )
     };
 
-    Ok(is_duckdb_query(&[pg_relation]))
+    if is_duckdb_query(&[pg_relation]) {
+        Ok(true)
+    } else {
+        fallback_warning!(format!(
+            "{} is not a foreign table from DuckDB",
+            rel_name.to_string_lossy()
+        ));
+        Ok(false)
+    }
 }
 
 /// Check if the JoinExpr is a DuckDB query
