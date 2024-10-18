@@ -17,9 +17,10 @@
 
 mod fixtures;
 
-use crate::fixtures::db::Query;
 use crate::fixtures::{conn, s3, S3};
 use anyhow::Result;
+
+use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use sqlx::PgConnection;
 
@@ -52,20 +53,6 @@ async fn test_explain_fdw(#[future(awt)] s3: S3, mut conn: PgConnection) -> Resu
         .0
         .contains("Filter: trips.tip_amount != Int64(0)"));
     assert!(explain[4].0.contains("TableScan: trips"));
-
-    Ok(())
-}
-
-#[rstest]
-async fn test_explain_heap(mut conn: PgConnection) -> Result<()> {
-    NycTripsTable::setup().execute(&mut conn);
-
-    let explain: Vec<(String,)> =
-        "EXPLAIN SELECT COUNT(*) FROM nyc_trips WHERE tip_amount <> 0".fetch(&mut conn);
-
-    assert!(explain[0].0.contains("Aggregate"));
-    assert!(explain[1].0.contains("Seq Scan on nyc_trips"));
-    assert!(explain[2].0.contains("Filter"));
 
     Ok(())
 }

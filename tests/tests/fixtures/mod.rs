@@ -16,7 +16,6 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 pub mod arrow;
-pub mod db;
 pub mod tables;
 
 use anyhow::Result;
@@ -32,6 +31,7 @@ use datafusion::{
     parquet::arrow::ArrowWriter,
 };
 use futures::future::{BoxFuture, FutureExt};
+use paradedb_sqllogictest::engine::Db;
 use rstest::*;
 use serde::Serialize;
 use serde_arrow::schema::{SchemaLike, TracingOptions};
@@ -48,7 +48,6 @@ use testcontainers_modules::{
     testcontainers::{runners::AsyncRunner, RunnableImage},
 };
 
-use crate::fixtures::db::*;
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
 
 #[fixture]

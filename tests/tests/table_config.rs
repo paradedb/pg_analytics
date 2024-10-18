@@ -21,10 +21,10 @@ use crate::fixtures::arrow::{
     primitive_record_batch, primitive_setup_fdw_local_file_listing, record_batch_with_casing,
     setup_local_file_listing_with_casing,
 };
-use crate::fixtures::db::Query;
 use crate::fixtures::{conn, tempdir};
 use anyhow::Result;
 use datafusion::parquet::arrow::ArrowWriter;
+use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use sqlx::PgConnection;
 use std::fs::File;

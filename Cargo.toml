@@ -18,20 +18,20 @@ pg17 = ["pgrx/pg17", "supabase-wrappers/pg17"]
 pg_test = []
 
 [dependencies]
-anyhow = "1.0.88"
-async-std = { version = "1.13.0", features = ["tokio1", "attributes"] }
-chrono = "0.4.38"
+anyhow = { workspace = true }
+async-std = { workspace = true }
+chrono = { workspace = true }
 duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "bundled",
   "extensions-full",
 ], rev = "e532dd6" }
-pgrx = "0.12.6"
+pgrx = { workspace = true }
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
-sqlparser = "0.50.0"
+sqlparser = { workspace = true }
 strum = { version = "0.26.3", features = ["derive"] }
 supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "f5ecb8d" }
-thiserror = "1.0.63"
+thiserror = { workspace = true }
 uuid = "1.10.0"
 
 [dev-dependencies]
@@ -43,4 +43,21 @@ path = "src/bin/pgrx_embed.rs"
 
 [workspace]
 resolver = "2"
-members = ["tests"]
+members = ["tests", "tests/sqllogictests"]
+
+[workspace.dependencies]
+anyhow = "1.0.89"
+async-std = { version = "1.13.0", features = ["tokio1", "attributes"] }
+thiserror = "1.0.64"
+sqlx = { version = "0.7.4", features = [
+  "postgres",
+  "runtime-async-std",
+  "time",
+  "bigdecimal",
+  "uuid",
+  "chrono",
+] }
+pgrx = "0.12.5"
+chrono = "0.4.19"
+datafusion = "37.1.0"
+sqlparser = "0.50.0"
