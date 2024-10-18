@@ -3877,7 +3877,6 @@ dependencies = [
  "chrono",
  "duckdb",
  "pgrx",
- "serde",
  "serde_json",
  "signal-hook",
  "sqlparser 0.50.0",
