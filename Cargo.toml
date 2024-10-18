@@ -26,34 +26,16 @@ duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "extensions-full",
 ], rev = "e532dd6" }
 pgrx = { workspace = true }
-serde = "1.0.210"
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
 sqlparser = { workspace = true }
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "c32abb7" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "f5ecb8d" }
 thiserror = { workspace = true }
 uuid = "1.10.0"
 
 [dev-dependencies]
-aws-config = "1.5.6"
-aws-sdk-s3 = "1.49.0"
-bigdecimal = { version = "0.3.1", features = ["serde"] }
-bytes = "1.7.1"
-datafusion = { workspace = true }
-deltalake = { version = "0.17.3", features = ["datafusion"] }
-futures = "0.3.30"
-pgrx-tests = "0.12.5"
-rstest = "0.19.0"
-serde_arrow = { version = "0.11.7", features = ["arrow-51"] }
-soa_derive = "0.13.0"
-sqlx = { workspace = true }
-tempfile = "3.12.0"
-testcontainers = "0.16.7"
-testcontainers-modules = { version = "0.4.3", features = ["localstack"] }
-time = { version = "0.3.36", features = ["serde"] }
-geojson = "0.24.1"
-paradedb-sqllogictest = { path = "./tests/sqllogictests" }
+
 
 [[bin]]
 name = "pgrx_embed_pg_analytics"

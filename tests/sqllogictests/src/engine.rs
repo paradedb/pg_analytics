@@ -42,11 +42,11 @@ use crate::{
     output::{DFColumnType, DFOutput},
 };
 
-pub struct ParadeDB {
+pub struct Db {
     context: TestContext<Postgres>,
 }
 
-impl ParadeDB {
+impl Db {
     pub async fn new() -> Self {
         // Use a timestamp as a unique identifier.
         let path = SystemTime::now()
@@ -72,7 +72,7 @@ impl ParadeDB {
     }
 }
 
-impl Drop for ParadeDB {
+impl Drop for Db {
     fn drop(&mut self) {
         let db_name = self.context.db_name.to_string();
         async_std::task::spawn(async move {
@@ -213,7 +213,7 @@ pub trait DisplayAsync: Stream<Item = Result<Bytes, sqlx::Error>> + Sized {
 impl<T> DisplayAsync for T where T: Stream<Item = Result<Bytes, sqlx::Error>> + Send + Sized {}
 
 #[async_trait]
-impl sqllogictest::AsyncDB for ParadeDB {
+impl sqllogictest::AsyncDB for Db {
     type Error = DFSqlLogicTestError;
     type ColumnType = DFColumnType;
 

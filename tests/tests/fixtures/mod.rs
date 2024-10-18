@@ -31,6 +31,7 @@ use datafusion::{
     parquet::arrow::ArrowWriter,
 };
 use futures::future::{BoxFuture, FutureExt};
+use paradedb_sqllogictest::engine::Db;
 use rstest::*;
 use serde::Serialize;
 use serde_arrow::schema::{SchemaLike, TracingOptions};
@@ -48,15 +49,14 @@ use testcontainers_modules::{
 };
 
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
-use paradedb_sqllogictest::engine::*;
 
 #[fixture]
-pub fn database() -> ParadeDB {
-    block_on(async { ParadeDB::new().await })
+pub fn database() -> Db {
+    block_on(async { Db::new().await })
 }
 
 #[fixture]
-pub fn conn(database: ParadeDB) -> PgConnection {
+pub fn conn(database: Db) -> PgConnection {
     block_on(async {
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")
@@ -68,7 +68,7 @@ pub fn conn(database: ParadeDB) -> PgConnection {
 }
 
 #[fixture]
-pub fn conn_with_pg_search(database: ParadeDB) -> PgConnection {
+pub fn conn_with_pg_search(database: Db) -> PgConnection {
     block_on(async {
         let mut conn = database.connection().await;
         sqlx::query("CREATE EXTENSION pg_analytics;")

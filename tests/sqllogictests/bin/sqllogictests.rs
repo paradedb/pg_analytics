@@ -27,7 +27,7 @@ use datafusion::common::runtime::SpawnedTask;
 use futures::StreamExt;
 use log::info;
 
-use paradedb_sqllogictest::engine::ParadeDB;
+use paradedb_sqllogictest::engine::Db;
 use sqllogictest::strict_column_validator;
 
 const TEST_DIRECTORY: &str = "test_files/";
@@ -118,7 +118,7 @@ async fn run_test_file(test_file: TestFile) -> Result<()> {
     info!("Running with ParadeDB runner: {}", path.display());
 
     setup_scratch_dir(&relative_path)?;
-    let mut runner = sqllogictest::Runner::new(|| async { Ok(ParadeDB::new().await) });
+    let mut runner = sqllogictest::Runner::new(|| async { Ok(Db::new().await) });
 
     runner.with_column_validator(strict_column_validator);
 

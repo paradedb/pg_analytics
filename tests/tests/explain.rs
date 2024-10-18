@@ -19,6 +19,7 @@ mod fixtures;
 
 use crate::fixtures::{conn, s3, S3};
 use anyhow::Result;
+
 use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use sqlx::PgConnection;

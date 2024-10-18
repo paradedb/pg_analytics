@@ -21,6 +21,8 @@ use anyhow::Result;
 use datafusion::arrow::array::{LargeStringArray, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::{arrow::record_batch::RecordBatch, parquet::arrow::ArrowWriter};
+use fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
+use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use serde_json::json;
 use sqlx::types::{Json, JsonValue};
@@ -29,9 +31,7 @@ use std::fs::File;
 use std::sync::Arc;
 use tempfile::TempDir;
 
-use crate::fixtures::arrow::{primitive_create_foreign_data_wrapper, primitive_create_server};
 use crate::fixtures::{conn, tempdir};
-use paradedb_sqllogictest::engine::Query;
 
 pub fn json_string_record_batch() -> Result<RecordBatch> {
     let fields = vec![

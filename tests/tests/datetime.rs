@@ -17,7 +17,6 @@
 
 mod fixtures;
 
-use crate::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use crate::fixtures::duckdb_conn;
 use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
 use crate::fixtures::tables::nyc_trips::NycTripsTable;
@@ -27,6 +26,7 @@ use crate::fixtures::{
 use anyhow::Result;
 use chrono::NaiveDateTime;
 use datafusion::parquet::arrow::ArrowWriter;
+use fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use sqlx::types::BigDecimal;
