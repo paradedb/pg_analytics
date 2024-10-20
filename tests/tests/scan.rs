@@ -24,12 +24,12 @@ use crate::fixtures::arrow::{
     primitive_setup_fdw_local_file_listing, primitive_setup_fdw_s3_delta,
     primitive_setup_fdw_s3_listing, setup_parquet_wrapper_and_server,
 };
-use crate::fixtures::db::Query;
 use crate::fixtures::{conn, duckdb_conn, s3, tempdir, S3};
 use anyhow::Result;
 use datafusion::parquet::arrow::ArrowWriter;
 use deltalake::operations::create::CreateBuilder;
 use deltalake::writer::{DeltaWriter, RecordBatchWriter};
+use paradedb_sqllogictest::engine::Query;
 use rstest::*;
 use sqlx::postgres::types::PgInterval;
 use sqlx::types::{BigDecimal, Json, Uuid};
