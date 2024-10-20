@@ -19,7 +19,10 @@ on:
       - "pg_analytics.control"
   push:
     branches:
-      - dev # Run CI on dev. This is important to fill the GitHub Actions cache in a way that pull requests can see it
+      - dev # Also run on dev to fill the GitHub Actions Rust cache in a way that pull requests can see it
+    paths:
+      - "**/*.rs"
+      - "**/*.toml"
   workflow_dispatch:
     inputs:
       test_upgrade_version:
@@ -72,9 +75,9 @@ jobs:
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
         uses: actions/checkout@v4
 
-      - name: Extract pgrx version
-        if: steps.check_skip.outputs.skip_remaining_steps != 'true'
-        run: echo "PGRX_VERSION=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv)" >> $GITHUB_ENV
+      - name: Extract pgrx Version
+        id: pgrx
+        run: echo version=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv) >> $GITHUB_OUTPUT
 
       - name: Install Rust
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
@@ -87,7 +90,7 @@ jobs:
         uses: ubicloud/rust-cache@v2
         with:
           prefix-key: "v1-rust"
-          key: ${{ matrix.pg_version }}-${{ env.PGRX_VERSION }}
+          key: ${{ matrix.pg_version }}-${{ steps.pgrx.outputs.version }}
           cache-targets: true
           cache-all-crates: true
 
@@ -106,7 +109,7 @@ jobs:
 
       - name: Install cargo-pgrx
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
-        run: cargo install -j $(nproc) --locked cargo-pgrx --version ${{ env.PGRX_VERSION }} --debug
+        run: cargo install -j $(nproc) --locked cargo-pgrx --version ${{ steps.pgrx.outputs.version }} --debug
 
       - name: Initialize cargo-pgrx environment
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'

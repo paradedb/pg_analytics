@@ -34,8 +34,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Extract pgrx version
-        run: echo "PGRX_VERSION=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv)" >> $GITHUB_ENV
+      - name: Extract pgrx Version
+        id: pgrx
+        run: echo version=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv) >> $GITHUB_OUTPUT
 
       # Caches from base branches are available to PRs, but not across unrelated branches, so we only
       # save the cache on the 'dev' branch, but load it on all branches.
@@ -43,7 +44,7 @@ jobs:
         uses: ubicloud/rust-cache@v2
         with:
           prefix-key: "v1-lint-rust"
-          key: ${{ matrix.pg_version }}-${{ env.PGRX_VERSION }}
+          key: ${{ matrix.pg_version }}-${{ steps.pgrx.outputs.version }}
           cache-targets: true
           cache-all-crates: true
 
@@ -54,7 +55,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y postgresql-${{ matrix.pg_version }} postgresql-server-dev-${{ matrix.pg_version }}
 
       - name: Install pgrx
-        run: cargo install --locked cargo-pgrx --version ${{ env.PGRX_VERSION }}
+        run: cargo install --locked cargo-pgrx --version ${{ steps.pgrx.outputs.version }} --debug
 
       - name: Initialize pgrx for Current PostgreSQL Version
         run: cargo pgrx init --pg${{ matrix.pg_version }}=/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
