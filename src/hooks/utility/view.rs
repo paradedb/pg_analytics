@@ -18,9 +18,8 @@
 use std::ptr::null_mut;
 
 use anyhow::Result;
-use pg_sys::parse_analyze_fixedparams;
 
-use pgrx::*;
+use pgrx::{pg_sys, warning};
 
 use crate::{duckdb::connection::execute, hooks::query::is_duckdb_query};
 
@@ -42,13 +41,27 @@ pub fn view_query(
             stmt_len,
         };
 
-        parse_analyze_fixedparams(
-            &mut raw_stmt,
-            (*pstate).p_sourcetext,
-            null_mut(),
-            0,
-            null_mut(),
-        )
+        #[cfg(any(feature = "pg15", feature = "pg16", feature = "pg17"))]
+        {
+            pg_sys::parse_analyze_fixedparams(
+                &mut raw_stmt,
+                (*pstate).p_sourcetext,
+                null_mut(),
+                0,
+                null_mut(),
+            )
+        }
+
+        #[cfg(any(feature = "pg13", feature = "pg14"))]
+        {
+            pg_sys::parse_analyze(
+                &mut raw_stmt,
+                (*pstate).p_sourcetext,
+                null_mut(),
+                0,
+                null_mut(),
+            )
+        }
     };
 
     let query_relations = get_query_relations(unsafe { (*query).rtable });
