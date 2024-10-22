@@ -55,7 +55,7 @@ pub fn view_query(
         {
             pg_sys::pg_analyze_and_rewrite(
                 &mut raw_stmt,
-                (*pstate).p_sourcetext,
+                query_string.as_ptr(),
                 null_mut(),
                 0,
                 null_mut(),
