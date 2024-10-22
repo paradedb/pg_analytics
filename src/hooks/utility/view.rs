@@ -27,7 +27,6 @@ use super::{get_query_relations, set_search_path_by_pg};
 
 pub fn view_query(
     query_string: &core::ffi::CStr,
-    pstate: *mut pg_sys::ParseState,
     stmt: *mut pg_sys::ViewStmt,
     stmt_location: i32,
     stmt_len: i32,
@@ -45,7 +44,7 @@ pub fn view_query(
         {
             pg_sys::parse_analyze_fixedparams(
                 &mut raw_stmt,
-                (*pstate).p_sourcetext,
+                query_string.as_ptr(),
                 null_mut(),
                 0,
                 null_mut(),
@@ -56,7 +55,7 @@ pub fn view_query(
         {
             pg_sys::parse_analyze(
                 &mut raw_stmt,
-                (*pstate).p_sourcetext,
+                query_string.as_ptr(),
                 null_mut(),
                 0,
                 null_mut(),

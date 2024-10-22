@@ -122,7 +122,6 @@ pub async fn process_utility_hook(
         )?,
         pg_sys::NodeTag::T_ViewStmt => view_query(
             query_string,
-            parse_state,
             pstmt.utilityStmt as *mut pg_sys::ViewStmt,
             pstmt.stmt_location,
             pstmt.stmt_len,
