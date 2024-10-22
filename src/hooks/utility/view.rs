@@ -32,7 +32,7 @@ pub fn view_query(
     stmt_len: i32,
 ) -> Result<bool> {
     // Perform parsing and analysis to get the Query
-    let query = unsafe {
+    let query_list = unsafe {
         let mut raw_stmt = pg_sys::RawStmt {
             type_: pg_sys::NodeTag::T_RawStmt,
             stmt: (*stmt).query,
@@ -42,7 +42,7 @@ pub fn view_query(
 
         #[cfg(any(feature = "pg15", feature = "pg16", feature = "pg17"))]
         {
-            pg_sys::parse_analyze_fixedparams(
+            pg_sys::pg_analyze_and_rewrite_fixedparams(
                 &mut raw_stmt,
                 query_string.as_ptr(),
                 null_mut(),
@@ -53,9 +53,9 @@ pub fn view_query(
 
         #[cfg(any(feature = "pg13", feature = "pg14"))]
         {
-            pg_sys::parse_analyze(
+            pg_sys::pg_analyze_and_rewrite(
                 &mut raw_stmt,
-                query_string.as_ptr(),
+                (*pstate).p_sourcetext,
                 null_mut(),
                 0,
                 null_mut(),
@@ -63,14 +63,31 @@ pub fn view_query(
         }
     };
 
-    let query_relations = get_query_relations(unsafe { (*query).rtable });
+    let plan_list = unsafe {
+        pg_sys::pg_plan_queries(
+            query_list,
+            query_string.as_ptr(),
+            pg_sys::CURSOR_OPT_PARALLEL_OK as i32,
+            null_mut(),
+        )
+    };
 
-    if unsafe { (*query).commandType } != pg_sys::CmdType::CMD_SELECT
-        || !is_duckdb_query(&query_relations)
-    {
-        fallback_warning!("Some relations are not in DuckDB");
-        return Ok(true);
+    unsafe {
+        for i in 0..(*plan_list).length {
+            let planned_stmt: *mut pg_sys::PlannedStmt =
+                (*(*plan_list).elements.offset(i as isize)).ptr_value as *mut pg_sys::PlannedStmt;
+
+            let query_relations = get_query_relations((*planned_stmt).rtable);
+
+            if (*planned_stmt).commandType != pg_sys::CmdType::CMD_SELECT
+                || !is_duckdb_query(&query_relations)
+            {
+                fallback_warning!("Some relations are not in DuckDB");
+                return Ok(true);
+            }
+        }
     }
+
     // Push down the view creation query to DuckDB
     set_search_path_by_pg()?;
     execute(query_string.to_str()?, [])?;
