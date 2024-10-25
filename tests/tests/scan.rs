@@ -672,11 +672,12 @@ async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Re
     // cannot fully pushdown to the DuckDB
     "CREATE TABLE t1 (a int);".execute(&mut conn);
     "INSERT INTO t1 VALUES (1);".execute(&mut conn);
+
     r#"
     CREATE VIEW primitive_join_view AS
     SELECT *
     FROM primitive
-    JOIN t1 ON t1.a = primitive.int32_col
+    JOIN t1 ON t1.a = primitive.int32_col;
     "#
     .execute(&mut conn);
 

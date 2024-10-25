@@ -19,7 +19,10 @@ use std::ptr::null_mut;
 
 use anyhow::Result;
 
-use pgrx::{pg_sys, warning};
+use pgrx::{
+    pg_sys::{self},
+    warning,
+};
 
 use crate::{duckdb::connection::execute, hooks::query::is_duckdb_query};
 
@@ -32,18 +35,16 @@ pub fn view_query(
     stmt_len: i32,
 ) -> Result<bool> {
     // Perform parsing and analysis to get the Query
-    let query_list = unsafe {
-        let mut raw_stmt = pg_sys::RawStmt {
-            type_: pg_sys::NodeTag::T_RawStmt,
-            stmt: (*stmt).query,
-            stmt_location,
-            stmt_len,
-        };
+    let rewritten_queries = unsafe {
+        let mut raw_stmt = pgrx::PgBox::<pg_sys::RawStmt>::alloc_node(pg_sys::NodeTag::T_RawStmt);
+        raw_stmt.stmt = (*stmt).query;
+        raw_stmt.stmt_location = stmt_location;
+        raw_stmt.stmt_len = stmt_len;
 
         #[cfg(any(feature = "pg15", feature = "pg16", feature = "pg17"))]
         {
             pg_sys::pg_analyze_and_rewrite_fixedparams(
-                &mut raw_stmt,
+                raw_stmt.as_ptr(),
                 query_string.as_ptr(),
                 null_mut(),
                 0,
@@ -54,7 +55,7 @@ pub fn view_query(
         #[cfg(any(feature = "pg13", feature = "pg14"))]
         {
             pg_sys::pg_analyze_and_rewrite(
-                &mut raw_stmt,
+                raw_stmt.as_ptr(),
                 query_string.as_ptr(),
                 null_mut(),
                 0,
@@ -65,7 +66,7 @@ pub fn view_query(
 
     let plan_list = unsafe {
         pg_sys::pg_plan_queries(
-            query_list,
+            rewritten_queries,
             query_string.as_ptr(),
             pg_sys::CURSOR_OPT_PARALLEL_OK as i32,
             null_mut(),
