@@ -1,9 +1,9 @@
 [package]
 name = "pg_analytics"
 description = "Postgres for analytics, powered by DuckDB"
-version = "0.2.1"
-edition = "2021"
-license = "AGPL-3.0"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -43,7 +43,12 @@ path = "src/bin/pgrx_embed.rs"
 
 [workspace]
 resolver = "2"
-members = ["tests", "tests/sqllogictests"]
+members = ["./", "tests", "tests/sqllogictests"]
+
+[workspace.package]
+version = "0.2.1"
+edition = "2021"
+license = "AGPL-3.0"
 
 [workspace.dependencies]
 anyhow = "1.0.89"
