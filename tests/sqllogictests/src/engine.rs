@@ -36,7 +36,7 @@ use sqlx::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::error::{DFSqlLogicTestError, Result};
+use crate::error::{Result, SqlLogicTestError};
 use crate::{
     arrow::schema_to_batch,
     output::{DFColumnType, DFOutput},
@@ -214,7 +214,7 @@ impl<T> DisplayAsync for T where T: Stream<Item = Result<Bytes, sqlx::Error>> + 
 
 #[async_trait]
 impl sqllogictest::AsyncDB for Db {
-    type Error = DFSqlLogicTestError;
+    type Error = SqlLogicTestError;
     type ColumnType = DFColumnType;
 
     async fn run(&mut self, sql: &str) -> Result<DBOutput<Self::ColumnType>, Self::Error> {

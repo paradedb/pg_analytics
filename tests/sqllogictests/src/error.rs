@@ -20,11 +20,11 @@ use sqllogictest::TestError;
 use sqlparser::parser::ParserError;
 use thiserror::Error;
 
-pub type Result<T, E = DFSqlLogicTestError> = std::result::Result<T, E>;
+pub type Result<T, E = SqlLogicTestError> = std::result::Result<T, E>;
 
-/// DataFusion sql-logicaltest error
+/// ParadeDB sql-logicaltest error
 #[derive(Debug, Error)]
-pub enum DFSqlLogicTestError {
+pub enum SqlLogicTestError {
     /// Error from sqlx
     #[error("Postgres error(from sqlx crate): {0}")]
     Sqlx(#[from] sqlx::Error),
@@ -42,8 +42,8 @@ pub enum DFSqlLogicTestError {
     Other(String),
 }
 
-impl From<String> for DFSqlLogicTestError {
+impl From<String> for SqlLogicTestError {
     fn from(value: String) -> Self {
-        DFSqlLogicTestError::Other(value)
+        SqlLogicTestError::Other(value)
     }
 }
