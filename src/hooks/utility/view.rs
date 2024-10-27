@@ -64,23 +64,14 @@ pub fn view_query(
         }
     };
 
-    let plan_list = unsafe {
-        pg_sys::pg_plan_queries(
-            rewritten_queries,
-            query_string.as_ptr(),
-            pg_sys::CURSOR_OPT_PARALLEL_OK as i32,
-            null_mut(),
-        )
-    };
-
     unsafe {
-        for i in 0..(*plan_list).length {
-            let planned_stmt: *mut pg_sys::PlannedStmt =
-                (*(*plan_list).elements.offset(i as isize)).ptr_value as *mut pg_sys::PlannedStmt;
+        for i in 0..(*rewritten_queries).length {
+            let query: *mut pg_sys::Query =
+                (*(*rewritten_queries).elements.offset(i as isize)).ptr_value as *mut pg_sys::Query;
 
-            let query_relations = get_query_relations((*planned_stmt).rtable);
+            let query_relations = get_query_relations((*query).rtable);
 
-            if (*planned_stmt).commandType != pg_sys::CmdType::CMD_SELECT
+            if (*query).commandType != pg_sys::CmdType::CMD_SELECT
                 || !is_duckdb_query(&query_relations)
             {
                 fallback_warning!("Some relations are not in DuckDB");
