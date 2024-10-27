@@ -273,4 +273,4 @@ DATABASE_URL=postgres://<username>@<host>:<port>/<database>
 
 ## License
 
-`pg_analytics` is licensed under the [GNU Affero General Public License v3.0](../LICENSE) and as commercial software. For commercial licensing, please contact us at [sales@paradedb.com](mailto:sales@paradedb.com).
+`pg_analytics` is licensed under the [PostgreSQL License](https://www.postgresql.org/about/licence/) and as commercial software. For commercial licensing, please contact us at [sales@paradedb.com](mailto:sales@paradedb.com).
