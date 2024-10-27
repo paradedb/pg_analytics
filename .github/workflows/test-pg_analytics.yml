@@ -120,6 +120,17 @@ jobs:
         working-directory: /home/runner/.pgrx/data-${{ matrix.pg_version }}/
         run: sed -i "s/^#shared_preload_libraries = .*/shared_preload_libraries = 'pg_analytics'/" postgresql.conf
 
+      - name: Compile & install pg_analytics extension
+        if: steps.check_skip.outputs.skip_remaining_steps != 'true'
+        run: cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+
+      - name: Start Postgres via cargo-pgrx
+        if: steps.check_skip.outputs.skip_remaining_steps != 'true'
+        run: |
+          RUST_BACKTRACE=1 cargo pgrx start pg${{ matrix.pg_version }}
+          # Necessary for the ephemeral Postgres test to have proper permissions
+          sudo chown -R $(whoami) /var/run/postgresql/
+
       # The SHA hash here must exactly match the Image::Tag that is referenced in the
       # testcontainers modules Rust crate for localstack.
       - name: Pull localstack image
@@ -141,15 +152,11 @@ jobs:
           mkdir -p target/coverage target/coverage-report
 
           echo ""
-          echo "Building pg_analytics..."
-          cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config" --release
-
-          echo ""
-          echo "Starting Postgres..."
-          cargo pgrx start pg${{ matrix.pg_version }}
-
-          echo ""
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           export RUST_BACKTRACE=1
           cargo test --package tests --features "pg${{ matrix.pg_version }}" --no-default-features
+
+      - name: Print the Postgres Logs
+        if: steps.check_skip.outputs.skip_remaining_steps != 'true' && always()
+        run: cat ~/.pgrx/${{ matrix.pg_version}}.log
