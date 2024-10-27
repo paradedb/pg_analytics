@@ -669,6 +669,11 @@ async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Re
     let res: (bool,) = "SELECT boolean_col FROM primitive_view".fetch_one(&mut conn);
     assert!(res.0);
 
+    // nested view, fully pushdown to the DuckDB
+    "CREATE VIEW nested_primitive_view AS SELECT * FROM primitive_view".execute(&mut conn);
+    let res: (bool,) = "SELECT boolean_col FROM nested_primitive_view".fetch_one(&mut conn);
+    assert!(res.0);
+
     // cannot fully pushdown to the DuckDB
     "CREATE TABLE t1 (a int);".execute(&mut conn);
     "INSERT INTO t1 VALUES (1);".execute(&mut conn);
