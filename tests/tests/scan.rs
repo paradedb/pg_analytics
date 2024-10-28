@@ -649,3 +649,44 @@ async fn test_prepare_search_path(mut conn: PgConnection, tempdir: TempDir) -> R
 
     Ok(())
 }
+
+// Test view creation with foreign table
+#[rstest]
+async fn test_view_foreign_table(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = primitive_record_batch()?;
+    let parquet_path = tempdir.path().join("test_arrow_types.parquet");
+    let parquet_file = File::create(&parquet_path)?;
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    primitive_setup_fdw_local_file_listing(parquet_path.as_path().to_str().unwrap(), "primitive")
+        .execute(&mut conn);
+
+    // fully pushdown to the DuckDB
+    "CREATE VIEW primitive_view AS SELECT * FROM primitive".execute(&mut conn);
+    let res: (bool,) = "SELECT boolean_col FROM primitive_view".fetch_one(&mut conn);
+    assert!(res.0);
+
+    // nested view, fully pushdown to the DuckDB
+    "CREATE VIEW nested_primitive_view AS SELECT * FROM primitive_view".execute(&mut conn);
+    let res: (bool,) = "SELECT boolean_col FROM nested_primitive_view".fetch_one(&mut conn);
+    assert!(res.0);
+
+    // cannot fully pushdown to the DuckDB
+    "CREATE TABLE t1 (a int);".execute(&mut conn);
+    "INSERT INTO t1 VALUES (1);".execute(&mut conn);
+
+    r#"
+    CREATE VIEW primitive_join_view AS
+    SELECT *
+    FROM primitive
+    JOIN t1 ON t1.a = primitive.int32_col;
+    "#
+    .execute(&mut conn);
+
+    let res: (i32,) = "SELECT int32_col FROM primitive_join_view".fetch_one(&mut conn);
+    assert_eq!(res.0, 1);
+    Ok(())
+}

@@ -19,15 +19,17 @@
 #![allow(deprecated)]
 mod explain;
 mod prepare;
+mod view;
 
 use std::ptr::null_mut;
 
+use super::query::*;
 use anyhow::{bail, Result};
-use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
-use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
-
 use explain::explain_query;
+use pgrx::{pg_sys, AllocatedByRust, HookResult, PgBox};
 use prepare::*;
+use sqlparser::{ast::Statement, dialect::PostgreSqlDialect, parser::Parser};
+use view::view_query;
 
 type ProcessUtilityHook = fn(
     pstmt: PgBox<pg_sys::PlannedStmt>,
@@ -114,6 +116,18 @@ pub async fn process_utility_hook(
             pstmt.utilityStmt as *mut pg_sys::ExplainStmt,
             dest.as_ptr(),
         )?,
+        pg_sys::NodeTag::T_ViewStmt => {
+            let utility_stmt = unsafe {
+                pg_sys::copyObjectImpl(pstmt.utilityStmt as *const std::ffi::c_void)
+                    as *mut pg_sys::Node
+            };
+            view_query(
+                query_string,
+                utility_stmt as *mut pg_sys::ViewStmt,
+                pstmt.stmt_location,
+                pstmt.stmt_len,
+            )?
+        }
         _ => bail!("unexpected statement type in utility hook"),
     };
 
@@ -135,6 +149,7 @@ pub async fn process_utility_hook(
 
 fn is_support_utility(stmt_type: pg_sys::NodeTag) -> bool {
     stmt_type == pg_sys::NodeTag::T_ExplainStmt
+        || stmt_type == pg_sys::NodeTag::T_ViewStmt
         || stmt_type == pg_sys::NodeTag::T_PrepareStmt
         || stmt_type == pg_sys::NodeTag::T_DeallocateStmt
         || stmt_type == pg_sys::NodeTag::T_ExecuteStmt
