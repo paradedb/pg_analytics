@@ -1,11 +1,11 @@
-# Test suite for `pg_analytics
+# Test suite for pg_analytics
 
 This is the test suite for the `pg_analytics` extension.
 
 An example of doing all that's necessary to run the tests is, from the root of the repo is:
 
 ```shell
-#! /bin/sh
+#!/bin/bash
 
 set -x
 export DATABASE_URL=postgresql://localhost:28816/pg_analytics

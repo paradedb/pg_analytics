@@ -18,4 +18,3 @@
 mod csv;
 mod duckdb;
 mod parquet;
-pub mod time_bucket;
