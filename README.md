@@ -119,7 +119,7 @@ SELECT COUNT(*) FROM trips;
 
 ## Documentation
 
-TODO: Add documentation breakdown here
+Complete documentation for `pg_analytics` can be found under the [docs](/docs/) folder as Markdown files. It covers how to query the various object stores and file and table formats supports, and how to configure and tune the extension.
 
 ## Development
 
