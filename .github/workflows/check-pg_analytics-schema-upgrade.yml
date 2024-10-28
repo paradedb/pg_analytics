@@ -39,6 +39,10 @@ jobs:
         with:
           fetch-depth: 0 # Fetch the entire history
 
+      - name: Extract pgrx Version
+        id: pgrx
+        run: echo version=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv) >> $GITHUB_OUTPUT
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -47,10 +51,9 @@ jobs:
       - name: Install Rust Cache
         uses: ubicloud/rust-cache@v2
         with:
-          prefix-key: "v1"
-          shared-key: ${{ runner.os }}-rust-cache-pg_analytics-${{ HashFiles('Cargo.lock') }}
+          prefix-key: "v1-rust"
+          key: ${{ env.pg_version }}-${{ steps.pgrx.outputs.version }}
           cache-targets: true
-          cache-on-failure: true
           cache-all-crates: true
           save-if: ${{ github.ref == 'refs/heads/dev' }}
 

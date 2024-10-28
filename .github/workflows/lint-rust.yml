@@ -43,10 +43,11 @@ jobs:
       - name: Install Rust Cache
         uses: ubicloud/rust-cache@v2
         with:
-          prefix-key: "v1-lint-rust"
+          prefix-key: "v1-rust"
           key: ${{ matrix.pg_version }}-${{ steps.pgrx.outputs.version }}
           cache-targets: true
           cache-all-crates: true
+          save-if: ${{ github.ref == 'refs/heads/dev' }}
 
       - name: Install & Configure Supported PostgreSQL Version
         run: |
