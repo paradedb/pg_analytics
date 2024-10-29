@@ -1,9 +1,9 @@
 [package]
 name = "tests"
-description = "test suite for pg_analytics"
-version = "0.2.1"
+description = "Test suite for pg_analytics"
+version = "0.2.2"
 edition = "2021"
-license = "AGPL-3.0"
+license = "PostgreSQL"
 
 [lib]
 crate-type = ["rlib"]

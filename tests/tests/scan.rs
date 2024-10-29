@@ -478,7 +478,6 @@ async fn test_complex_quals_pushdown(mut conn: PgConnection, tempdir: TempDir) -
     // make sure the result is correct with complex clauses.
     let rows: Vec<(i64,)> = query.fetch(&mut conn);
 
-    // TODO: check the plan. Wrappers not parse quals correctly. So there is not qual pushdown
     assert!(
         rows.len() == 2,
         "result error: rows length: {}\nquery: {}\n",

@@ -3,17 +3,22 @@
 <br>
 </h1>
 
-[![Test pg_analytics](https://github.com/paradedb/pg_analytics/actions/workflows/test-pg_analytics.yml/badge.svg)](https://github.com/paradedb/pg_analytics/actions/workflows/test-pg_analytics.yml)
+[![Publish pg_analytics](https://github.com/paradedb/pg_analytics/actions/workflows/publish-pg_analytics.yml/badge.svg)](https://github.com/paradedb/pg_analytics/actions/workflows/publish-pg_analytics.yml)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/paradedb)](https://artifacthub.io/packages/search?repo=paradedb)
+[![Docker Pulls](https://img.shields.io/docker/pulls/paradedb/paradedb)](https://hub.docker.com/r/paradedb/paradedb)
+[![License](https://img.shields.io/badge/License-PostgreSQL-blue)](https://github.com/paradedb/pg_analytics?tab=PostgreSQL-1-ov-file#readme)
+[![Slack URL](https://img.shields.io/badge/Join%20Slack-purple?logo=slack&link=https%3A%2F%2Fjoin.slack.com%2Ft%2Fparadedbcommunity%2Fshared_invite%2Fzt-2lkzdsetw-OiIgbyFeiibd1DG~6wFgTQ)](https://join.slack.com/t/paradedbcommunity/shared_invite/zt-2lkzdsetw-OiIgbyFeiibd1DG~6wFgTQ)
+[![X URL](https://img.shields.io/twitter/url?url=https%3A%2F%2Ftwitter.com%2Fparadedb&label=Follow%20%40paradedb)](https://x.com/paradedb)
 
 ## Overview
 
-`pg_analytics` (formerly named `pg_lakehouse`) puts DuckDB inside Postgres.
+`pg_analytics` (formerly named `pg_lakehouse`) puts DuckDB inside Postgres. With `pg_analytics` installed, Postgres can query foreign object stores like AWS S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high performance analytical query engine.
 
-With `pg_analytics` installed, Postgres can query foreign object stores like S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high performance analytical query engine.
+`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 13+.
 
 ### Motivation
 
-Today, a vast amount of non-operational data — events, metrics, historical snapshots, vendor data, etc. — is ingested into data lakes like S3. Querying this data by moving it into a cloud data warehouse or operating a new query engine is expensive and time-consuming. The goal of `pg_analytics` is to enable this data to be queried directly from Postgres. This eliminates the need for new infrastructure, loss of data freshness, data movement, and non-Postgres dialects of other query engines.
+Today, a vast amount of non-operational data — events, metrics, historical snapshots, vendor data, etc. — is ingested into data lakes like AWS S3. Querying this data by moving it into a cloud data warehouse or operating a new query engine is expensive and time-consuming. The goal of `pg_analytics` is to enable this data to be queried directly from Postgres. This eliminates the need for new infrastructure, loss of data freshness, data movement, and non-Postgres dialects of other query engines.
 
 `pg_analytics` uses the foreign data wrapper (FDW) API to connect to any object store or table format and the executor hook API to push queries to DuckDB. While other FDWs like `aws_s3` have existed in the Postgres extension ecosystem, these FDWs suffer from two limitations:
 
@@ -24,31 +29,33 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 
 ### Roadmap
 
-- [ ] Read support for `pg_analytics`
-- [ ] Write support for `pg_analytics`
-- [ ] `EXPLAIN` support
-- [ ] Automatic schema detection
+- [x] Read support for `pg_analytics`
+- [ ] (In progress) Write support for `pg_analytics`
+- [x] `EXPLAIN` support
+- [x] `VIEW` support
+- [x] Automatic schema detection
 - [ ] Integration with the catalog providers
 
 #### Object Stores
 
-- [x] Amazon S3
+- [x] AWS S3
 - [x] S3-compatible stores (MinIO, R2)
+- [x] Google Cloud Storage
 - [x] Azure Blob Storage
 - [x] Azure Data Lake Storage Gen2
-- [x] Google Cloud Storage
+- [x] HuggingFace
 - [x] HTTP server
 - [x] Local file system
 
-#### Table Formats
+#### File/Table Formats
 
 - [x] Parquet
 - [x] CSV
-- [x] Apache Iceberg
-- [x] Delta Lake
 - [x] JSON
-
-`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 17, 16, 15, 14 and 13.
+- [x] Geospatial (`.geojson`, `.xlsx`)
+- [x] Delta Lake
+- [x] Apache Iceberg
+- [ ] Apache Hudi
 
 ## Installation
 
@@ -57,49 +64,30 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 The easiest way to use the extension is to run the ParadeDB Dockerfile:
 
 ```bash
-docker run \
-  --name paradedb \
-  -e POSTGRESQL_USERNAME=<user> \
-  -e POSTGRESQL_PASSWORD=<password> \
-  -e POSTGRESQL_DATABASE=<dbname> \
-  -e POSTGRESQL_POSTGRES_PASSWORD=<superuser_password> \
-  -v paradedb_data:/bitnami/postgresql \
-  -p 5432:5432 \
-  -d \
-  paradedb/paradedb:latest
+docker run --name paradedb -e POSTGRES_PASSWORD=password paradedb/paradedb
+docker exec -it paradedb psql -U postgres
 ```
 
-This will spin up a Postgres instance with `pg_analytics` preinstalled.
+This will spin up a PostgreSQL 16 instance with `pg_analytics` preinstalled.
 
 ### From Self-Hosted PostgreSQL
 
-If you are self-hosting Postgres and would like to use the extension within your existing Postgres, follow the steps below.
+Because this extension uses Postgres hooks to intercept and push queries down to DuckDB, it is **very important** that it is added to `shared_preload_libraries` inside `postgresql.conf`.
 
-It's **very important** to make the following change to your `postgresql.conf` configuration file. `pg_analytics` must be in the list of `shared_preload_libraries`:
-
-```c
+```bash
+# Inside postgresql.conf
 shared_preload_libraries = 'pg_analytics'
 ```
 
-This ensures the best query performance from the extension .
+This ensures the best query performance from the extension.
 
-#### Debian/Ubuntu
+#### Linux
 
-We provide prebuilt binaries for Debian-based Linux for Postgres 17, 16, 15, 14 and 13. You can download the latest version for your architecture from the [releases page](https://github.com/paradedb/paradedb/releases).
-
-ParadeDB collects anonymous telemetry to help us understand how many people are using the project. You can opt out of telemetry by setting `export PARADEDB_TELEMETRY=false` (or unsetting the variable) in your shell or in your `~/.bashrc` file before running the extension.
+We provide prebuilt binaries for Debian, Ubuntu, and Red Hat Enterprise Linux for Postgres 14+. You can download the latest version for your architecture from the [GitHub Releases page](https://github.com/paradedb/paradedb/releases).
 
 #### macOS
 
-We don't suggest running production workloads on macOS. As a result, we don't provide prebuilt binaries for macOS. If you are running Postgres on macOS and want to install `pg_analytics`, please follow the [development](#development) instructions, but do `cargo pgrx install --release` instead of `cargo pgrx run`. This will build the extension from source and install it in your Postgres instance.
-
-You can then create the extension in your database by running:
-
-```sql
-CREATE EXTENSION pg_analytics;
-```
-
-Note: If you are using a managed Postgres service like Amazon RDS, you will not be able to install `pg_analytics` until the Postgres service explicitly supports it.
+At this time, we do not provide prebuilt binaries for macOS. If you are running Postgres on macOS and want to install `pg_analytics`, please follow the [development](#development) instructions, replacing `cargo pgrx run` by `cargo pgrx install --release`. This will build the extension from source and install it in your macOS Postgres instance (e.g. Homebrew).
 
 #### Windows
 
@@ -129,16 +117,11 @@ SELECT COUNT(*) FROM trips;
 (1 row)
 ```
 
-To query your own data, please refer to the [documentation](https://docs.paradedb.com/analytics/object_stores).
+## Documentation
 
-## Shared Preload Libraries
+Complete documentation for `pg_analytics` can be found under the [docs](/docs/) folder as Markdown files. It covers how to query the various object stores and file and table formats supports, and how to configure and tune the extension.
 
-Because this extension uses Postgres hooks to intercept and push queries down to DuckDB, it is **very important** that it is added to `shared_preload_libraries` inside `postgresql.conf`.
-
-```bash
-# Inside postgresql.conf
-shared_preload_libraries = 'pg_analytics'
-```
+A hosted version of the documentation can be found [here](https://docs.paradedb.com/integrations/overview).
 
 ## Development
 
@@ -155,9 +138,7 @@ rustup default <version>
 
 Note: While it is possible to install Rust via your package manager, we recommend using `rustup` as we've observed inconsistencies with Homebrew's Rust installation on macOS.
 
-Then, install the PostgreSQL version of your choice using your system package manager. Here we provide the commands for the default PostgreSQL version used by this project:
-
-### Install Other Dependencies
+### Install Dependencies
 
 Before compiling the extension, you'll need to have the following dependencies installed.
 
@@ -166,10 +147,10 @@ Before compiling the extension, you'll need to have the following dependencies i
 brew install make gcc pkg-config openssl
 
 # Ubuntu
-sudo apt-get install -y make gcc pkg-config libssl-dev
+sudo apt-get install -y make gcc pkg-config libssl-dev libclang-dev
 
 # Arch Linux
-sudo pacman -S core/openssl
+sudo pacman -S core/openssl extra/clang
 ```
 
 ### Install Postgres
@@ -198,7 +179,7 @@ export PATH="$PATH:/Applications/Postgres.app/Contents/Versions/latest/bin"
 Then, install and initialize `pgrx`:
 
 ```bash
-# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg17, --pg16, --pg15, --pg14, --pg13 etc.)
+# Note: Replace --pg17 with your version of Postgres, if different (i.e. --pg16)
 cargo install --locked cargo-pgrx --version 0.12.6
 
 # macOS arm64
@@ -216,18 +197,6 @@ cargo pgrx init --pg17=/usr/bin/pg_config
 
 If you prefer to use a different version of Postgres, update the `--pg` flag accordingly.
 
-Note: While it is possible to develop using pgrx's own Postgres installation(s), via `cargo pgrx init` without specifying a `pg_config` path, we recommend using your system package manager's Postgres as we've observed inconsistent behaviours when using pgrx's.
-
-`pgrx` requires `libclang`. To install it:
-
-```bash
-# Ubuntu
-sudo apt install libclang-dev
-
-# Arch Linux
-sudo pacman -S extra/clang
-```
-
 ### Running the Extension
 
 First, start pgrx:
@@ -242,7 +211,7 @@ This will launch an interactive connection to Postgres. Inside Postgres, create 
 CREATE EXTENSION pg_analytics;
 ```
 
-Now, you have access to all the extension functions.
+You now have access to all the extension functions.
 
 ### Modifying the Extension
 
@@ -273,4 +242,4 @@ DATABASE_URL=postgres://<username>@<host>:<port>/<database>
 
 ## License
 
-`pg_analytics` is licensed under the [PostgreSQL License](https://www.postgresql.org/about/licence/) and as commercial software. For commercial licensing, please contact us at [sales@paradedb.com](mailto:sales@paradedb.com).
+`pg_analytics` is licensed under the [PostgreSQL License](https://www.postgresql.org/about/licence/).
