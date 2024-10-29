@@ -17,25 +17,16 @@
 
 mod fixtures;
 
-use crate::fixtures::arrow::primitive_setup_fdw_local_file_listing;
 use crate::fixtures::db::Query;
 use crate::fixtures::duckdb_conn;
 use crate::fixtures::tables::duckdb_types::DuckdbTypesTable;
-use crate::fixtures::tables::nyc_trips::NycTripsTable;
-use crate::fixtures::{
-    conn, tempdir, time_series_record_batch_minutes, time_series_record_batch_years,
-};
+use crate::fixtures::{conn, tempdir};
 use anyhow::Result;
-use chrono::NaiveDateTime;
-use datafusion::parquet::arrow::ArrowWriter;
 use rstest::*;
-use sqlx::types::BigDecimal;
 use sqlx::PgConnection;
-use std::fs::File;
-use std::str::FromStr;
 use tempfile::TempDir;
 use time::macros::datetime;
-use time::{Date, Month::January, PrimitiveDateTime};
+use time::PrimitiveDateTime;
 
 #[rstest]
 async fn test_date_trunc(
