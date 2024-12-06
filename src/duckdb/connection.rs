@@ -66,6 +66,7 @@ pub fn get_global_connection() -> &'static UnsafeCell<Connection> {
     INIT.call_once(|| {
         init_globals();
     });
+    #[allow(static_mut_refs)]
     unsafe {
         GLOBAL_CONNECTION
             .as_ref()
@@ -77,6 +78,7 @@ fn get_global_statement() -> &'static UnsafeCell<Option<Statement<'static>>> {
     INIT.call_once(|| {
         init_globals();
     });
+    #[allow(static_mut_refs)]
     unsafe {
         GLOBAL_STATEMENT
             .as_ref()
@@ -88,7 +90,10 @@ fn get_global_arrow() -> &'static UnsafeCell<Option<duckdb::Arrow<'static>>> {
     INIT.call_once(|| {
         init_globals();
     });
-    unsafe { GLOBAL_ARROW.as_ref().expect("Arrow not initialized") }
+    #[allow(static_mut_refs)]
+    unsafe {
+        GLOBAL_ARROW.as_ref().expect("Arrow not initialized")
+    }
 }
 
 pub fn create_csv_view(
