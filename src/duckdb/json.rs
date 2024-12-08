@@ -98,10 +98,10 @@ fn extract_option(
     table_options: &HashMap<String, String>,
     quote: bool,
 ) -> Option<String> {
-    return table_options.get(option.as_ref()).map(|res| match quote {
+    table_options.get(option.as_ref()).map(|res| match quote {
         true => format!("{option} = '{res}'"),
         false => format!("{option} = {res}"),
-    });
+    })
 }
 
 #[cfg(test)]

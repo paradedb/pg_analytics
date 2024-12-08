@@ -163,13 +163,7 @@ fn parse_query_from_utility_stmt(query_string: &core::ffi::CStr) -> Result<Strin
 
     debug_assert!(utility.len() == 1);
     match &utility[0] {
-        Statement::Explain {
-            describe_alias: _,
-            analyze: _,
-            verbose: _,
-            statement,
-            format: _,
-        } => Ok(statement.to_string()),
+        Statement::Explain { statement, .. } => Ok(statement.to_string()),
         _ => bail!("unexpected utility statement: {}", query_string),
     }
 }

@@ -66,6 +66,7 @@ pub fn get_global_connection() -> &'static UnsafeCell<Connection> {
     INIT.call_once(|| {
         init_globals();
     });
+    #[allow(static_mut_refs)]
     unsafe {
         GLOBAL_CONNECTION
             .as_ref()
@@ -77,6 +78,7 @@ fn get_global_statement() -> &'static UnsafeCell<Option<Statement<'static>>> {
     INIT.call_once(|| {
         init_globals();
     });
+    #[allow(static_mut_refs)]
     unsafe {
         GLOBAL_STATEMENT
             .as_ref()
@@ -88,7 +90,10 @@ fn get_global_arrow() -> &'static UnsafeCell<Option<duckdb::Arrow<'static>>> {
     INIT.call_once(|| {
         init_globals();
     });
-    unsafe { GLOBAL_ARROW.as_ref().expect("Arrow not initialized") }
+    #[allow(static_mut_refs)]
+    unsafe {
+        GLOBAL_ARROW.as_ref().expect("Arrow not initialized")
+    }
 }
 
 pub fn create_csv_view(
@@ -248,4 +253,22 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
     execute(format!("SET search_path TO '{schemas}'").as_str(), [])?;
 
     Ok(())
+}
+
+pub fn execute_explain(query: &str) -> Result<String> {
+    let conn = unsafe { &*get_global_connection().get() };
+    let mut stmt = conn.prepare(query)?;
+    let rows = stmt.query_row([], |row| {
+        let mut r = vec![];
+
+        let mut col_index = 1;
+        while let Ok(value) = row.get::<_, String>(col_index) {
+            r.push(value);
+            col_index += 1;
+        }
+
+        Ok(r)
+    })?;
+
+    Ok(rows.join(""))
 }
