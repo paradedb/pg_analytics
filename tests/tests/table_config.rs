@@ -105,7 +105,7 @@ fn test_reserved_column_name(mut conn: PgConnection, tempdir: TempDir) -> Result
     setup_parquet_wrapper_and_server().execute(&mut conn);
 
     match format!(
-        "CREATE FOREIGN TABLE reserved_table_name () SERVER parquet_server OPTIONS (files '{}')",
+        "CREATE FOREIGN TABLE reserved_table_name () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
         parquet_path.to_str().unwrap()
     )
     .execute_result(&mut conn)

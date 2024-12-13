@@ -245,10 +245,15 @@ pub fn primitive_record_batch_single() -> Result<RecordBatch> {
 }
 
 pub fn reserved_column_record_batch() -> Result<RecordBatch> {
-    // INTEGER authorization is a reserved column name
+    // authorization is a reserved column name
     let fields = vec![
-        Field::new("INTEGER", DataType::Int32, false),
+        Field::new("id", DataType::Utf8, false),
+        Field::new("operation_id", DataType::Utf8, false),
+        Field::new("order_id", DataType::Utf8, false),
+        Field::new("dealer_id", DataType::Utf8, false),
+        Field::new("dealer_name", DataType::Utf8, false),
         Field::new("authorization", DataType::Utf8, false),
+        Field::new("on_day", DataType::Boolean, false),
     ];
 
     let schema = Arc::new(Schema::new(fields));
@@ -256,11 +261,24 @@ pub fn reserved_column_record_batch() -> Result<RecordBatch> {
     Ok(RecordBatch::try_new(
         schema,
         vec![
-            Arc::new(Int32Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec![Some("1"), Some("2"), Some("3")])),
+            Arc::new(StringArray::from(vec![Some("1"), Some("2"), Some("3")])),
+            Arc::new(StringArray::from(vec![Some("1"), Some("2"), Some("3")])),
+            Arc::new(StringArray::from(vec![Some("1"), Some("2"), Some("3")])),
+            Arc::new(StringArray::from(vec![
+                Some("Jason"),
+                Some("Alice"),
+                Some("Bob"),
+            ])),
             Arc::new(StringArray::from(vec![
                 Some("auth_1"),
                 Some("auth_2"),
                 Some("auth_3"),
+            ])),
+            Arc::new(BooleanArray::from(vec![
+                Some(true),
+                Some(false),
+                Some(true),
             ])),
         ],
     )?)
