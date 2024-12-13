@@ -244,6 +244,28 @@ pub fn primitive_record_batch_single() -> Result<RecordBatch> {
     )?)
 }
 
+pub fn reserved_column_record_batch() -> Result<RecordBatch> {
+    // INTEGER authorization is a reserved column name
+    let fields = vec![
+        Field::new("INTEGER", DataType::Int32, false),
+        Field::new("authorization", DataType::Utf8, false),
+    ];
+
+    let schema = Arc::new(Schema::new(fields));
+
+    Ok(RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec![
+                Some("auth_1"),
+                Some("auth_2"),
+                Some("auth_3"),
+            ])),
+        ],
+    )?)
+}
+
 pub fn primitive_create_foreign_data_wrapper(
     wrapper: &str,
     handler: &str,
