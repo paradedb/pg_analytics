@@ -19,7 +19,8 @@ mod fixtures;
 
 use crate::fixtures::arrow::{
     primitive_record_batch, primitive_setup_fdw_local_file_listing, record_batch_with_casing,
-    setup_local_file_listing_with_casing,
+    reserved_column_record_batch, setup_local_file_listing_with_casing,
+    setup_parquet_wrapper_and_server,
 };
 use crate::fixtures::db::Query;
 use crate::fixtures::{conn, tempdir};
@@ -85,6 +86,33 @@ async fn test_reserved_table_name(mut conn: PgConnection, tempdir: TempDir) -> R
         }
         Err(e) => {
             assert_eq!(e.to_string(), "error returned from database: Table name 'duckdb_types' is not allowed because it is reserved by DuckDB")
+        }
+    }
+
+    Ok(())
+}
+
+#[rstest]
+fn test_reserved_column_name(mut conn: PgConnection, tempdir: TempDir) -> Result<()> {
+    let stored_batch = reserved_column_record_batch()?;
+    let parquet_path = tempdir.path().join("reserved_column_table.parquet");
+    let parquet_file = File::create(&parquet_path).unwrap();
+
+    let mut writer = ArrowWriter::try_new(parquet_file, stored_batch.schema(), None).unwrap();
+    writer.write(&stored_batch)?;
+    writer.close()?;
+
+    setup_parquet_wrapper_and_server().execute(&mut conn);
+
+    match format!(
+        "CREATE FOREIGN TABLE reserved_table_name () SERVER parquet_server OPTIONS (files '{}', preserve_casing 'true')",
+        parquet_path.to_str().unwrap()
+    )
+    .execute_result(&mut conn)
+    {
+        Ok(_) => {}
+        Err(e) => {
+            panic!("fail to create table with reserved column name: {}", e)
         }
     }
 
