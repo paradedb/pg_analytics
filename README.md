@@ -43,7 +43,7 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] Google Cloud Storage
 - [x] Azure Blob Storage
 - [x] Azure Data Lake Storage Gen2
-- [x] HuggingFace
+- [x] Hugging Face (`.parquet`, `.csv`, `.jsonl`)
 - [x] HTTP server
 - [x] Local file system
 
