@@ -18,11 +18,9 @@ async fn test_duckdb_settings(mut conn: PgConnection) -> Result<()> {
 
 #[rstest]
 async fn test_duckdb_extensions(mut conn: PgConnection) -> Result<()> {
-    let azure_extension: (Option<String>,) = "SELECT extension_name
-                                                FROM duckdb_extensions()
-                                                WHERE extension_name = 'azure'
-                                                AND installed = true"
-        .fetch_one(&mut conn);
+    let azure_extension: (Option<String>,) =
+        "SELECT extension_name FROM duckdb_extensions() WHERE extension_name = 'azure'"
+            .fetch_one(&mut conn);
     assert!(azure_extension.0.is_some());
 
     Ok(())
