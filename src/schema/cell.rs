@@ -340,8 +340,8 @@ where
 
         match downcast_array.value_type() {
             DataType::Boolean => {
-                let list = downcast_array.values();
-                let values = list
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
                     .get_primitive_list_value::<BooleanArray, Option<bool>>(index)?
                     .map_or(vec![], |arr| {
                         arr.into_iter()
@@ -351,8 +351,8 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Int8 => {
-                let list = downcast_array.values();
-                let values = list
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
                     .get_primitive_list_value::<Int8Array, Option<i8>>(index)?
                     .map_or(vec![], |arr| {
                         arr.into_iter()
@@ -362,8 +362,8 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Int16 => {
-                let list = downcast_array.values();
-                let values = list
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
                     .get_primitive_list_value::<Int16Array, Option<i16>>(index)?
                     .map_or(vec![], |arr| {
                         arr.into_iter()
@@ -373,8 +373,8 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Int32 => {
-                let list = downcast_array.values();
-                let values = list
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
                     .get_primitive_list_value::<Int32Array, Option<i32>>(index)?
                     .map_or(vec![], |arr| {
                         arr.into_iter()
@@ -384,8 +384,8 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Int64 => {
-                let list = downcast_array.values();
-                let values = list
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
                     .get_primitive_list_value::<Int64Array, Option<i64>>(index)?
                     .map_or(vec![], |arr| {
                         arr.into_iter()
@@ -395,19 +395,21 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Utf8 => {
-                let list = downcast_array.values();
-                let values = list.get_string_list_value(index)?.map_or(vec![], |arr| {
-                    arr.into_iter()
-                        .map(|opt| opt.map_or(Value::Null, Value::String))
-                        .collect()
-                });
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_string_list_value(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, Value::String))
+                            .collect()
+                    });
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::LargeUtf8 => {
-                let list = downcast_array.values();
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
                 let mut values = vec![];
-                for i in 0..list.len() {
-                    let string_value = list
+                for i in 0..list_array.len() {
+                    let string_value = list_array
                         .get_primitive_value::<LargeStringArray>(i)?
                         .map_or(Value::Null, |v| Value::String(v.to_string()));
                     values.push(string_value);
@@ -415,19 +417,19 @@ where
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::Struct(_) => {
-                let list = downcast_array.value(index);
+                let list_array = downcast_array.value(index);
                 let mut values = vec![];
-                for i in 0..list.len() {
-                    let struct_value = list.get_struct_value(i)?.map_or(Value::Null, |v| v.0);
+                for i in 0..list_array.len() {
+                    let struct_value = list_array.get_struct_value(i)?.map_or(Value::Null, |v| v.0);
                     values.push(struct_value);
                 }
                 Ok(Some(datum::JsonB(Value::Array(values))))
             }
             DataType::List(_) => {
-                let list = downcast_array.value(index);
+                let list_array = downcast_array.value(index);
                 let mut values = vec![];
-                for i in 0..list.len() {
-                    let list_value = list.get_list_value(i)?.map_or(Value::Null, |v| v.0);
+                for i in 0..list_array.len() {
+                    let list_value = list_array.get_list_value(i)?.map_or(Value::Null, |v| v.0);
                     values.push(list_value);
                 }
                 Ok(Some(datum::JsonB(Value::Array(values))))
