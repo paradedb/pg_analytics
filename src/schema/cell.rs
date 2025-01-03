@@ -327,6 +327,118 @@ where
     }
 }
 
+pub trait GetListValue
+where
+    Self: Array + AsArray,
+{
+    fn get_list_value(&self, index: usize) -> Result<Option<datum::JsonB>> {
+        let downcast_array = self.as_list::<i32>();
+
+        if downcast_array.nulls().is_some() && downcast_array.is_null(index) {
+            return Ok(None);
+        }
+
+        match downcast_array.value_type() {
+            DataType::Boolean => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_primitive_list_value::<BooleanArray, Option<bool>>(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, Value::from))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Int8 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_primitive_list_value::<Int8Array, Option<i8>>(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, |v| Value::Number(Number::from(v))))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Int16 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_primitive_list_value::<Int16Array, Option<i16>>(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, |v| Value::Number(Number::from(v))))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Int32 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_primitive_list_value::<Int32Array, Option<i32>>(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, |v| Value::Number(Number::from(v))))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Int64 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_primitive_list_value::<Int64Array, Option<i64>>(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, |v| Value::Number(Number::from(v))))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Utf8 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let values = list_array
+                    .get_string_list_value(index)?
+                    .map_or(vec![], |arr| {
+                        arr.into_iter()
+                            .map(|opt| opt.map_or(Value::Null, Value::String))
+                            .collect()
+                    });
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::LargeUtf8 => {
+                let list_array: ArrayRef = Arc::new(downcast_array.clone());
+                let mut values = vec![];
+                for i in 0..list_array.len() {
+                    let string_value = list_array
+                        .get_primitive_value::<LargeStringArray>(i)?
+                        .map_or(Value::Null, |v| Value::String(v.to_string()));
+                    values.push(string_value);
+                }
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::Struct(_) => {
+                let list_array = downcast_array.value(index);
+                let mut values = vec![];
+                for i in 0..list_array.len() {
+                    let struct_value = list_array.get_struct_value(i)?.map_or(Value::Null, |v| v.0);
+                    values.push(struct_value);
+                }
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            DataType::List(_) => {
+                let list_array = downcast_array.value(index);
+                let mut values = vec![];
+                for i in 0..list_array.len() {
+                    let list_value = list_array.get_list_value(i)?.map_or(Value::Null, |v| v.0);
+                    values.push(list_value);
+                }
+                Ok(Some(datum::JsonB(Value::Array(values))))
+            }
+            unsupported => bail!("List with {:?} types are not yet supported", unsupported),
+        }
+    }
+}
+
 pub trait GetDecimalValue
 where
     Self: Array + AsArray,
@@ -559,6 +671,7 @@ where
         + GetIntervalDayTimeValue
         + GetIntervalMonthDayNanoValue
         + GetIntervalYearMonthValue
+        + GetListValue
         + GetPrimitiveValue
         + GetPrimitiveListValue
         + GetStringListValue
@@ -1040,6 +1153,13 @@ where
                         None => Ok(None),
                     }
                 }
+                DataType::List(_) => match self.get_list_value(index)? {
+                    Some(value) => {
+                        let json_value: serde_json::Value = serde_json::to_value(value)?;
+                        Ok(Some(Cell::Json(datum::Json(json_value))))
+                    }
+                    None => Ok(None),
+                },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
                     name.to_string(),
                     unsupported.clone(),
@@ -1068,6 +1188,10 @@ where
                         None => Ok(None),
                     }
                 }
+                DataType::List(_) => match self.get_list_value(index)? {
+                    Some(value) => Ok(Some(Cell::JsonB(value))),
+                    None => Ok(None),
+                },
                 unsupported => Err(DataTypeError::DataTypeMismatch(
                     name.to_string(),
                     unsupported.clone(),
@@ -1266,6 +1390,7 @@ impl GetDecimalValue for ArrayRef {}
 impl GetIntervalDayTimeValue for ArrayRef {}
 impl GetIntervalMonthDayNanoValue for ArrayRef {}
 impl GetIntervalYearMonthValue for ArrayRef {}
+impl GetListValue for ArrayRef {}
 impl GetPrimitiveValue for ArrayRef {}
 impl GetPrimitiveListValue for ArrayRef {}
 impl GetStringListValue for ArrayRef {}
