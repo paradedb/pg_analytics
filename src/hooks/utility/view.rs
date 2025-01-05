@@ -83,7 +83,6 @@ pub fn view_query(
             if (*planned_stmt).commandType != pg_sys::CmdType::CMD_SELECT
                 || !is_duckdb_query(&query_relations)
             {
-                fallback_warning!("Some relations are not in DuckDB");
                 return Ok(true);
             }
         }
@@ -91,6 +90,9 @@ pub fn view_query(
 
     // Push down the view creation query to DuckDB
     set_search_path_by_pg()?;
-    execute(query_string.to_str()?, [])?;
+    if let Err(e) = execute(query_string.to_str()?, []) {
+        fallback_warning!(e.to_string());
+    }
+
     Ok(true)
 }

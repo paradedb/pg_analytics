@@ -55,7 +55,9 @@ pub async fn process_utility_hook(
 ) -> Result<()> {
     let stmt_type = unsafe { (*pstmt.utilityStmt).type_ };
 
-    if !is_support_utility(stmt_type) {
+    // IsPostmasterEnvironment is false when it is false in a standalone process (bootstrap or
+    // standalone backend).
+    if !is_support_utility(stmt_type) || unsafe { !pg_sys::IsPostmasterEnvironment } {
         prev_hook(
             pstmt,
             query_string,
