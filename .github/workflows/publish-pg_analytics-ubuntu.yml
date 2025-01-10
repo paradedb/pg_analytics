@@ -9,6 +9,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - phil/improve-publishing # TODO: Remove once done testing
   workflow_dispatch:
     inputs:
       version:
