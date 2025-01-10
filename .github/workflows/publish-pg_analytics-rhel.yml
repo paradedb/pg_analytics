@@ -256,9 +256,9 @@ jobs:
           Requires:       postgresql${{ matrix.pg_version }}-server
 
           %description
-          pg_analytics is a Postgres extension that enables full-text search over
-          PostgreSQL tables using the BM25 algorithm. It is built on top of Tantivy,
-          the Rust-based alternative to Apache Lucene, using pgrx.
+          pg_analytics is a Postgres extension that enables fast analytics over data
+          lakes. It is built on top of DuckDB, the fast in-process analytical database
+          system, using pgrx.
 
           %install
           %{__rm} -rf %{buildroot}
@@ -299,7 +299,7 @@ jobs:
         run: |
           RESPONSE=$(gh api \
             -H "Authorization: token $GH_TOKEN" \
-            /repos/paradedb/paradedb/releases/tags/v${{ steps.version.outputs.tag_version }})
+            /repos/paradedb/pg_analytics/releases/tags/v${{ steps.version.outputs.tag_version }})
           echo "REST API Response: $RESPONSE"
 
           UPLOAD_URL=$(echo "$RESPONSE" | jq -r '.upload_url' | sed 's/{.*}//')
