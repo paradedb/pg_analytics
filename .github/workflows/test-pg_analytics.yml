@@ -249,7 +249,6 @@ jobs:
 
       - name: Stop Postgres
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
-        working-directory: pg_search/
         run: cargo pgrx stop all
 
       - name: Compile & install pg_analytics extension
@@ -260,7 +259,7 @@ jobs:
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
         run: |
           RUST_BACKTRACE=1 cargo pgrx start pg${{ matrix.pg_version }}
-          ~/.pgrx/${{ matrix.pg_version }}.*/pgrx-install/bin/createdb -p 288${{ matrix.pg_version }} -h localhost pg_search
+          ~/.pgrx/${{ matrix.pg_version }}.*/pgrx-install/bin/createdb -p 288${{ matrix.pg_version }} -h localhost pg_analytics
 
       # The SHA hash here must exactly match the Image::Tag that is referenced in the
       # testcontainers modules Rust crate for localstack.
