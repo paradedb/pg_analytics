@@ -1,0 +1,141 @@
+# workflows/test-pg_analytics-upgrade.yml
+#
+# Test pg_analytics Upgrade
+# Test that the pg_analytics extension can upgrade via ALTER EXTENSION.
+
+name: Test pg_analytics Upgrade
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main # We only run the extension upgrade test on PRs to `main`, since it's when we do the release
+    paths:
+      - ".github/workflows/test-pg_analytics-upgrade.yml"
+      - "src/**"
+      - "tests/**"
+      - "Cargo.toml"
+      - "pg_analytics.control"
+  workflow_dispatch:
+
+concurrency:
+  group: test-pg_analytics-upgrade-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-pg_analytics-upgrade:
+    name: Test upgrading pg_analytics via ALTER EXTENSION
+    runs-on: ubicloud-standard-8
+    if: github.event.pull_request.draft == false
+    strategy:
+      matrix:
+        pg_version: [16] # We test extension upgrade on Postgres 16 for compatibility with older versions of pg_analytics
+
+    steps:
+      - name: Checkout Git Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch the entire history
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Extract pgrx Version
+        id: pgrx
+        run: echo version=$(cargo tree --depth 1 -i pgrx -p pg_analytics | head -n 1 | cut -f2 -dv) >> $GITHUB_OUTPUT
+
+      # Caches from base branches are available to PRs, but not across unrelated branches, so we only
+      # save the cache on the 'dev' branch, but load it on all branches.
+      - name: Install Rust Cache
+        uses: ubicloud/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
+          key: ${{ matrix.pg_version }}-${{ steps.pgrx.outputs.version }}
+          cache-targets: true
+          cache-all-crates: true
+          save-if: ${{ github.ref == 'refs/heads/dev' }}
+
+      - name: Install required system tools
+        run: sudo apt-get update && sudo apt-get install -y lsof
+
+      - name: Install & Configure Supported PostgreSQL Version
+        run: |
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update && sudo apt-get install -y postgresql-${{ matrix.pg_version }} postgresql-server-dev-${{ matrix.pg_version }}
+          sudo chown -R $(whoami) /usr/share/postgresql/${{ matrix.pg_version }}/ /usr/lib/postgresql/${{ matrix.pg_version }}/ /var/lib/postgresql/${{ matrix.pg_version }}/
+          echo "/usr/lib/postgresql/${{ matrix.pg_version }}/bin" >> $GITHUB_PATH
+
+      - name: Install llvm-tools-preview
+        run: rustup component add llvm-tools-preview
+
+      # This is the pgrx version compatible with pg_analytics v0.2.0
+      - name: Install cargo-pgrx for pg_analytics v0.2.0
+        run: cargo install -j $(nproc) --locked cargo-pgrx --version 0.12.5 --debug
+
+      - name: Initialize cargo-pgrx Environment for pg_analytics v0.2.0
+        run: cargo pgrx init "--pg${{ matrix.pg_version }}=/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+
+      - name: Add pg_analytics to shared_preload_libraries
+        working-directory: /home/runner/.pgrx/data-${{ matrix.pg_version }}/
+        run: sed -i "s/^#shared_preload_libraries = .*/shared_preload_libraries = 'pg_analytics'/" postgresql.conf
+
+      # This is the first version at which we started supporting upgrading via ALTER EXTENSION
+      - name: Checkout pg_analytics v0.2.0
+        run: git checkout v0.2.0
+
+      - name: Compile & install pg_analytics v0.2.0
+        run: cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+
+      - name: Start Postgres via cargo-pgrx
+        run: |
+          RUST_BACKTRACE=1 cargo pgrx start pg${{ matrix.pg_version }}
+          # Necessary for the ephemeral Postgres test to have proper permissions
+          sudo chown -R $(whoami) /var/run/postgresql/
+
+      # The SHA hash here must exactly match the Image::Tag that is referenced in the
+      # testcontainers modules Rust crate for localstack.
+      - name: Pull Localstack Image
+        run: docker pull localstack/localstack@sha256:73698e485240939490134aadd7e429ac87ff068cd5ad09f5de8ccb76727c13e1
+
+      - name: Create pg_analytics extension
+        run: psql -h localhost -p 288${{ matrix.pg_version }} postgres -c 'CREATE EXTENSION pg_analytics;'
+
+      - name: Stop Postgres via cargo-pgrx
+        run: RUST_BACKTRACE=1 cargo pgrx stop pg${{ matrix.pg_version }}
+
+      - name: Install cargo-pgrx for pg_analytics `dev`
+        run: cargo install -j $(nproc) --locked cargo-pgrx --version ${{ steps.pgrx.outputs.version }} --debug
+
+      - name: Initialize cargo-pgrx environment for pg_analytics `dev`
+        run: cargo pgrx init "--pg${{ matrix.pg_version }}=/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+
+      # This is the current version which we want to test upgrading to
+      - name: Checkout pg_analytics `dev`
+        run: git checkout ${{ github.head_ref }}
+
+      - name: Compile & install pg_analytics `dev`
+        run: cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+
+      - name: Start Postgres via cargo-pgrx
+        run: |
+          RUST_BACKTRACE=1 cargo pgrx start pg${{ matrix.pg_version }}
+          # Necessary for the ephemeral Postgres test to have proper permissions
+          sudo chown -R $(whoami) /var/run/postgresql/
+
+      - name: Alter pg_analytics extension to the latest version
+        run: |
+          VERSION=$(grep "^version" ../Cargo.toml | head -1 | awk -F '"' '{print $2}')
+          psql -h localhost -p 288${{ matrix.pg_version }} postgres -c "ALTER EXTENSION pg_analytics UPDATE TO '$VERSION';"
+
+      - name: Run pg_analytics test suite
+        run: |
+          echo ""
+          echo "Running Rust tests..."
+          export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
+          export RUST_BACKTRACE=1
+          cargo test --package tests --features "pg${{ matrix.pg_version }}" --no-default-features
+
+      - name: Print the Postgres Logs
+        if: always()
+        run: cat ~/.pgrx/${{ matrix.pg_version}}.log

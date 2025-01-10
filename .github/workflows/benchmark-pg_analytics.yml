@@ -6,8 +6,6 @@
 name: Benchmark pg_analytics
 
 on:
-  schedule:
-    - cron: "1 0 * * 1,2,3,4,5" # Run once per day on weekdays (days of the week 1-5) at 00:01 UTC
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
@@ -19,8 +17,9 @@ on:
       - "Cargo.toml"
       - "pg_analytics.control"
   push:
-    branches:
-      - dev # Also run on dev to fill the GitHub Actions Rust cache in a way that pull requests can see it
+    branches: # Also run on `dev` and `main` to store benchmark baselines in GitHub Artifacts for PRs to compare against
+      - dev
+      - main
     paths:
       - "**/*.rs"
       - "**/*.toml"
@@ -99,4 +98,4 @@ jobs:
       - name: Notify Slack on Failure
         if: failure() && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"Benchmark pg_analytics on ${{ matrix.name }} workflow failed in `paradedb/paradedb` -- investigate immediately!"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"Benchmark pg_analytics on ${{ matrix.name }} workflow failed in `paradedb/pg_analytics` -- investigate immediately!"}' ${{ secrets.SLACK_WEBHOOK_URL }}
