@@ -80,13 +80,9 @@ shared_preload_libraries = 'pg_analytics'
 
 This ensures the best query performance from the extension.
 
-#### Linux
+#### Linux & macOS
 
-We provide prebuilt binaries for Debian, Ubuntu, and Red Hat Enterprise Linux for Postgres 14+. You can download the latest version for your architecture from the [GitHub Releases page](https://github.com/paradedb/paradedb/releases).
-
-#### macOS
-
-At this time, we do not provide prebuilt binaries for macOS. If you are running Postgres on macOS and want to install `pg_analytics`, please follow the [development](#development) instructions, replacing `cargo pgrx run` by `cargo pgrx install --release`. This will build the extension from source and install it in your macOS Postgres instance (e.g. Homebrew).
+We provide prebuilt binaries for macOS, Debian, Ubuntu, and Red Hat Enterprise Linux for Postgres 14+. You can download the latest version for your architecture from the [GitHub Releases page](https://github.com/paradedb/paradedb/releases).
 
 #### Windows
 
