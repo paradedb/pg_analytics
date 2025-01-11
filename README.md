@@ -3,7 +3,6 @@
 <br>
 </h1>
 
-[![Publish pg_analytics](https://github.com/paradedb/pg_analytics/actions/workflows/publish-pg_analytics.yml/badge.svg)](https://github.com/paradedb/pg_analytics/actions/workflows/publish-pg_analytics.yml)
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/paradedb)](https://artifacthub.io/packages/search?repo=paradedb)
 [![Docker Pulls](https://img.shields.io/docker/pulls/paradedb/paradedb)](https://hub.docker.com/r/paradedb/paradedb)
 [![License](https://img.shields.io/badge/License-PostgreSQL-blue)](https://github.com/paradedb/pg_analytics?tab=PostgreSQL-1-ov-file#readme)
