@@ -30,7 +30,7 @@ serde_json = "1.0.128"
 signal-hook = "0.3.17"
 sqlparser = "0.52.0"
 strum = { version = "0.26.3", features = ["derive"] }
-supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "8aef4a6" }
+supabase-wrappers = { git = "https://github.com/paradedb/wrappers.git", default-features = false, rev = "31e5a1f" }
 thiserror = "1.0.63"
 uuid = "1.10.0"
 
