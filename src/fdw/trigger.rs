@@ -183,7 +183,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
     // Alter Postgres table to match DuckDB schema
     let preserve_casing = table_options
         .get("preserve_casing")
-        .map_or(false, |s| s.eq_ignore_ascii_case("true"));
+        .is_some_and(|s| s.eq_ignore_ascii_case("true"));
     let alter_table_statement =
         construct_alter_table_statement(schema_name, table_name, schema_rows, preserve_casing);
     Spi::run(alter_table_statement.as_str())?;
