@@ -25,11 +25,6 @@ on:
       - "**/*.rs"
       - "**/*.toml"
   workflow_dispatch:
-    inputs:
-      test_upgrade_version:
-        description: "Upcoming pg_analytics version to test upgrading against"
-        required: false
-        default: ""
 
 concurrency:
   group: test-pg_analytics-${{ github.head_ref || github.ref }}
