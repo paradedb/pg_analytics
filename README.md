@@ -29,11 +29,9 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 ### Roadmap
 
 - [x] Read support for `pg_analytics`
-- [ ] (In progress) Write support for `pg_analytics`
 - [x] `EXPLAIN` support
 - [x] `VIEW` support
 - [x] Automatic schema detection
-- [ ] Integration with the catalog providers
 
 #### Object Stores
 
@@ -54,7 +52,6 @@ Today, a vast amount of non-operational data — events, metrics, historical sna
 - [x] Geospatial (`.geojson`, `.xlsx`)
 - [x] Delta Lake
 - [x] Apache Iceberg
-- [ ] Apache Hudi
 
 ## Installation
 
