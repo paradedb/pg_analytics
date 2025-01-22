@@ -154,6 +154,48 @@ OPTIONS (
 );
 ```
 
+## Nested JSON Fields
+
+Parquet files containing nested JSON fields can be flattened to provide direct access to the subfields.
+
+```sql
+CREATE FOREIGN TABLE parquet_table ()
+SERVER parquet_server
+OPTIONS (
+  files '/folder/*.parquet', select 'unnest(nested_column)'
+);
+```
+
+<Accordion title="Example Usage">
+```sql
+-- Without unnest
+CREATE FOREIGN TABLE parquet_table_nested ()
+SERVER parquet_server
+OPTIONS (files '~/Downloads/test_duckdb_types.parquet', select 'struct_col');
+
+select \* from parquet_table_nested;
+struct_col
+
+---
+
+{"a": "abc", "b": "def"}
+
+-- With unnest
+CREATE FOREIGN TABLE parquet_table_unnested ()
+SERVER parquet_server
+OPTIONS (files '~/Downloads/test_duckdb_types.parquet', select 'unnest(struct_col)');
+
+select \* from parquet_table_unnested;
+a | b
+-----+-----
+abc | def
+(1 row)
+
+````
+
+In the above example, `test_duckdb_types.parquet` has a JSON field called `struct_col`.
+</Accordion>
+
 ## Parquet Schema
 
 The `parquet_describe` function returns the column names and types contained within a Parquet file. This function is useful
@@ -161,7 +203,7 @@ for determining the schema of the Postgres foreign table.
 
 ```sql
 SELECT * FROM parquet_describe('/path/to/file.parquet')
-```
+````
 
 The `parquet_schema` function returns the internal schema contained within the metadata of a Parquet file.
 
