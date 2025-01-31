@@ -125,7 +125,7 @@ jobs:
 
       - name: Alter pg_analytics extension to the latest version
         run: |
-          VERSION=$(grep "^version" ../Cargo.toml | head -1 | awk -F '"' '{print $2}')
+          VERSION=$(grep "^version" Cargo.toml | head -1 | awk -F '"' '{print $2}')
           psql -h localhost -p 288${{ matrix.pg_version }} postgres -c "ALTER EXTENSION pg_analytics UPDATE TO '$VERSION';"
 
       - name: Run pg_analytics test suite
