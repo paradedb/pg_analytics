@@ -255,6 +255,16 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
     Ok(())
 }
 
+pub fn set_duckdb_extension_directory(extension_directory_path: &str) -> Result<()> {
+    // Set duckdb extension directory
+    execute(
+        format!("SET extension_directory = '{extension_directory_path}'").as_str(),
+        [],
+    )?;
+
+    Ok(())
+}
+
 pub fn execute_explain(query: &str) -> Result<String> {
     let conn = unsafe { &*get_global_connection().get() };
     let mut stmt = conn.prepare(query)?;
@@ -271,4 +281,12 @@ pub fn execute_explain(query: &str) -> Result<String> {
     })?;
 
     Ok(rows.join(""))
+}
+
+pub fn install_httpfs() -> Result<()> {
+    if !check_extension_loaded("httpfs")? {
+        execute("INSTALL httpfs", [])?;
+        execute("LOAD httpfs", [])?;
+    }
+    Ok(())
 }

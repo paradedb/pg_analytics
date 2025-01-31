@@ -150,11 +150,6 @@ jobs:
           RUST_BACKTRACE: full
         run: |
           echo ""
-          echo "Enabling code coverage..."
-          echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> .cargo/config.toml
-          mkdir -p target/coverage target/coverage-report
-
-          echo ""
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
           export RUST_BACKTRACE=1
@@ -267,11 +262,6 @@ jobs:
           LLVM_PROFILE_FILE: target/coverage/pg_analytics-%p-%m.profraw
           RUST_BACKTRACE: full
         run: |
-          echo ""
-          echo "Enabling code coverage..."
-          echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> .cargo/config.toml
-          mkdir -p target/coverage target/coverage-report
-
           echo ""
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
