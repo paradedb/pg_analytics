@@ -18,6 +18,7 @@
 use anyhow::{anyhow, bail, Result};
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
+use std::ffi::CStr;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use supabase_wrappers::prelude::*;
@@ -25,7 +26,9 @@ use thiserror::Error;
 
 use super::handler::FdwHandler;
 use crate::duckdb::connection;
+use crate::fdw::base::connection::set_duckdb_extension_directory;
 use crate::schema::cell::*;
+
 #[cfg(debug_assertions)]
 use crate::DEBUG_GUCS;
 
@@ -222,6 +225,15 @@ pub fn register_duckdb_view(
     if !user_mapping_options.is_empty() {
         connection::create_secret(DEFAULT_SECRET, user_mapping_options)?;
     }
+
+    // In CloudNativePG, the filesystem is read-only. To work around this, we force
+    // DuckDB to install its extensions in the PGDATA directory, which is writable.
+    let data_dir = unsafe {
+        CStr::from_ptr(pgrx::pg_sys::DataDir)
+            .to_str()
+            .map_err(|e| anyhow::anyhow!("Failed to convert DataDir to &str: {}", e))?
+    };
+    let _ = set_duckdb_extension_directory(data_dir);
 
     // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
     connection::install_httpfs()?;
