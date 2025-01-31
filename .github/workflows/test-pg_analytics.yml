@@ -149,6 +149,9 @@ jobs:
           LLVM_PROFILE_FILE: target/coverage/pg_analytics-%p-%m.profraw
           RUST_BACKTRACE: full
         run: |
+          # Make the home directory read-only to prevent writing to it
+          chmod -R a-w $HOME
+
           echo ""
           echo "Enabling code coverage..."
           echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> .cargo/config.toml
@@ -267,6 +270,9 @@ jobs:
           LLVM_PROFILE_FILE: target/coverage/pg_analytics-%p-%m.profraw
           RUST_BACKTRACE: full
         run: |
+          # Make the home directory read-only to prevent writing to it
+          chmod -R a-w $HOME
+
           echo ""
           echo "Enabling code coverage..."
           echo -e "\n# Enable code coverage on Linux only, for CI builds\n[target.'cfg(target_os=\"linux\")']\nrustflags = [\"-Cinstrument-coverage\"]" >> .cargo/config.toml
