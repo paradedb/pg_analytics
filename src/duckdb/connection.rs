@@ -272,3 +272,11 @@ pub fn execute_explain(query: &str) -> Result<String> {
 
     Ok(rows.join(""))
 }
+
+pub fn install_httpfs() -> Result<()> {
+    if !check_extension_loaded("httpfs")? {
+        execute("INSTALL httpfs", [])?;
+        execute("LOAD httpfs", [])?;
+    }
+    Ok(())
+}

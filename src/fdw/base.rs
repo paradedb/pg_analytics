@@ -223,6 +223,9 @@ pub fn register_duckdb_view(
         connection::create_secret(DEFAULT_SECRET, user_mapping_options)?;
     }
 
+    // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
+    connection::install_httpfs()?;
+
     if !connection::view_exists(table_name, schema_name)? {
         // Initialize DuckDB view
         connection::execute(
