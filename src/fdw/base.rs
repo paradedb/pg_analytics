@@ -18,8 +18,8 @@
 use anyhow::{anyhow, bail, Result};
 use duckdb::arrow::array::RecordBatch;
 use pgrx::*;
-use std::ffi::CStr;
 use std::collections::HashMap;
+use std::ffi::CStr;
 use strum::IntoEnumIterator;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;

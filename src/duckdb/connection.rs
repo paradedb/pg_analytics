@@ -257,7 +257,10 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
 
 pub fn set_duckdb_extension_directory(extension_directory_path: &str) -> Result<()> {
     // Set duckdb extension directory
-    execute(format!("SET extension_directory = '{extension_directory_path}'").as_str(), [])?;
+    execute(
+        format!("SET extension_directory = '{extension_directory_path}'").as_str(),
+        [],
+    )?;
 
     Ok(())
 }
