@@ -24,7 +24,7 @@ chrono = "0.4.38"
 duckdb = { git = "https://github.com/paradedb/duckdb-rs.git", features = [
   "bundled",
   "extensions-full",
-], rev = "c2f9e2010e326de21126e90dc24da47e0a962cb0" }
+], rev = "e532dd6" }
 pgrx = "0.12.7"
 serde_json = "1.0.128"
 signal-hook = "0.3.17"
