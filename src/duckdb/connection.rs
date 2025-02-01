@@ -22,6 +22,7 @@ use signal_hook::consts::signal::*;
 use signal_hook::iterator::Signals;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::sync::Once;
 use std::thread;
 
@@ -40,6 +41,13 @@ fn init_globals() {
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
         GLOBAL_ARROW = Some(UnsafeCell::new(None));
     }
+
+    // Force DuckDB to install its extensions in the PGDATA directory, which is writable,
+    // in case the rest of the filesystem is read-only
+    let _ = set_duckdb_extension_directory().expect("failed to set duckdb extension directory");
+
+    // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
+    install_httpfs().expect("failed to install httpfs");
 
     thread::spawn(move || {
         let mut signals =
@@ -255,14 +263,16 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn set_duckdb_extension_directory(extension_directory_path: &str) -> Result<()> {
-    // Set duckdb extension directory
+pub fn set_duckdb_extension_directory() -> Result<usize> {
+    let data_dir = unsafe {
+        CStr::from_ptr(pgrx::pg_sys::DataDir)
+            .to_str()
+            .map_err(|e| anyhow::anyhow!("Failed to convert DataDir to &str: {}", e))?
+    };
     execute(
-        format!("SET extension_directory = '{extension_directory_path}'").as_str(),
+        format!("SET extension_directory = '{data_dir}'").as_str(),
         [],
-    )?;
-
-    Ok(())
+    )
 }
 
 pub fn execute_explain(query: &str) -> Result<String> {
