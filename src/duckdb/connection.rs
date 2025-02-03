@@ -42,14 +42,14 @@ fn init_globals() {
     let _ =
         set_duckdb_extension_directory(&conn).expect("failed to set duckdb extension directory");
 
+    // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
+    install_httpfs(&conn).expect("failed to install httpfs");
+    
     unsafe {
         GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
         GLOBAL_ARROW = Some(UnsafeCell::new(None));
     }
-
-    // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
-    install_httpfs().expect("failed to install httpfs");
 
     thread::spawn(move || {
         let mut signals =
@@ -296,10 +296,10 @@ pub fn execute_explain(query: &str) -> Result<String> {
     Ok(rows.join(""))
 }
 
-pub fn install_httpfs() -> Result<()> {
+pub fn install_httpfs(conn: &Connection) -> Result<()> {
     if !check_extension_loaded("httpfs")? {
-        execute("INSTALL httpfs", [])?;
-        execute("LOAD httpfs", [])?;
+        conn.execute("INSTALL httpfs", [])?;
+        conn.execute("LOAD httpfs", [])?;
     }
     Ok(())
 }
