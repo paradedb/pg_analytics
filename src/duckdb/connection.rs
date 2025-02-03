@@ -43,7 +43,10 @@ fn init_globals() {
         set_duckdb_extension_directory(&conn).expect("failed to set duckdb extension directory");
 
     // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
-    install_httpfs(&conn).expect("failed to install httpfs");
+    conn.execute("INSTALL httpfs", [])
+        .expect("failed to install httpfs");
+    conn.execute("LOAD httpfs", [])
+        .expect("failed to load httpfs");
 
     unsafe {
         GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
@@ -294,12 +297,4 @@ pub fn execute_explain(query: &str) -> Result<String> {
     })?;
 
     Ok(rows.join(""))
-}
-
-pub fn install_httpfs(conn: &Connection) -> Result<()> {
-    if !check_extension_loaded("httpfs")? {
-        conn.execute("INSTALL httpfs", [])?;
-        conn.execute("LOAD httpfs", [])?;
-    }
-    Ok(())
 }
