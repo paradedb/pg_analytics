@@ -263,16 +263,13 @@ pub fn set_search_path(search_path: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn set_duckdb_extension_directory() -> Result<usize> {
+pub fn set_duckdb_extension_directory(conn: &Connection) -> Result<usize> {
     let data_dir = unsafe {
         CStr::from_ptr(pgrx::pg_sys::DataDir)
             .to_str()
             .map_err(|e| anyhow::anyhow!("Failed to convert DataDir to &str: {}", e))?
     };
-    execute(
-        format!("SET extension_directory = '{data_dir}'").as_str(),
-        [],
-    )
+    conn.execute(format!("SET extension_directory = '{data_dir}'").as_str(), []).map_err(|err| anyhow!("{err}"))
 }
 
 pub fn execute_explain(query: &str) -> Result<String> {
