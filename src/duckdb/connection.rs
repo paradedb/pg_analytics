@@ -44,7 +44,7 @@ fn init_globals() {
 
     // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
     install_httpfs(&conn).expect("failed to install httpfs");
-    
+
     unsafe {
         GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
