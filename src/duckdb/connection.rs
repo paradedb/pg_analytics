@@ -269,7 +269,11 @@ pub fn set_duckdb_extension_directory(conn: &Connection) -> Result<usize> {
             .to_str()
             .map_err(|e| anyhow::anyhow!("Failed to convert DataDir to &str: {}", e))?
     };
-    conn.execute(format!("SET extension_directory = '{data_dir}'").as_str(), []).map_err(|err| anyhow!("{err}"))
+    conn.execute(
+        format!("SET extension_directory = '{data_dir}'").as_str(),
+        [],
+    )
+    .map_err(|err| anyhow!("{err}"))
 }
 
 pub fn execute_explain(query: &str) -> Result<String> {
