@@ -36,15 +36,17 @@ static INIT: Once = Once::new();
 
 fn init_globals() {
     let conn = Connection::open_in_memory().expect("failed to open duckdb connection");
+
+    // Force DuckDB to install its extensions in the PGDATA directory, which is writable,
+    // in case the rest of the filesystem is read-only
+    let _ =
+        set_duckdb_extension_directory(&conn).expect("failed to set duckdb extension directory");
+
     unsafe {
         GLOBAL_CONNECTION = Some(UnsafeCell::new(conn));
         GLOBAL_STATEMENT = Some(UnsafeCell::new(None));
         GLOBAL_ARROW = Some(UnsafeCell::new(None));
     }
-
-    // Force DuckDB to install its extensions in the PGDATA directory, which is writable,
-    // in case the rest of the filesystem is read-only
-    let _ = set_duckdb_extension_directory(&conn).expect("failed to set duckdb extension directory");
 
     // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
     install_httpfs().expect("failed to install httpfs");
