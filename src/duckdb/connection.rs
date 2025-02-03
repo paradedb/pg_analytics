@@ -44,7 +44,7 @@ fn init_globals() {
 
     // Force DuckDB to install its extensions in the PGDATA directory, which is writable,
     // in case the rest of the filesystem is read-only
-    let _ = set_duckdb_extension_directory().expect("failed to set duckdb extension directory");
+    let _ = set_duckdb_extension_directory(&conn).expect("failed to set duckdb extension directory");
 
     // duckdb-rs stopped bundling in httpfs, so we need to load it ourselves
     install_httpfs().expect("failed to install httpfs");
