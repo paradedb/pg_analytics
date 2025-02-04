@@ -1,18 +1,29 @@
-name: 🚀 Release on PGXN
+# workflows/publish-pg_analytics-pgxn.yml
+#
+# Publish pg_analytics (PGXN)
+# Build and publish the pg_analytics extension to the PostgreSQL Extension Network (PGXN).
+
+name: Publish pg_analytics (PGXN)
+
 on:
   push:
-    # Release on semantic version tag.
-    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
 jobs:
-  release:
-    name: Release on PGXN
+  publish-pg_analytics:
+    name: Publish pg_analytics to PGXN
     runs-on: ubuntu-latest
     container: pgxn/pgxn-tools
+
     steps:
-      - name: Check out the repo
+      - name: Checkout Git Repository
         uses: actions/checkout@v4
+
       - name: Bundle the Release
         run: make dist
+
       - name: Release on PGXN
         env:
           PGXN_USERNAME: ${{ secrets.PGXN_USERNAME }}
