@@ -80,13 +80,7 @@ pub async fn process_utility_hook(
     };
 
     let need_exec_prev_hook = match stmt_type {
-        pg_sys::NodeTag::T_PrepareStmt => prepare_query(
-            parse_state,
-            pstmt.utilityStmt as *mut pg_sys::PrepareStmt,
-            pstmt.stmt_location,
-            pstmt.stmt_len,
-        )?,
-
+        pg_sys::NodeTag::T_PrepareStmt => true,
         pg_sys::NodeTag::T_ExecuteStmt => {
             let mut query_desc = unsafe {
                 PgBox::<pg_sys::QueryDesc, AllocatedByRust>::from_rust(pg_sys::CreateQueryDesc(
