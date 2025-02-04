@@ -4,7 +4,7 @@
    "description": "pg_analytics puts DuckDB inside Postgres. With pg_analytics installed, Postgres can query foreign object stores like AWS S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high-performance analytical query engine.",
    "version": "@CARGO_VERSION@",
    "maintainer": [
-      "Philippe Noël <phil@paradedb.com>"
+      "ParadeDB <support@paradedb.com>"
    ],
    "license": "postgresql",
    "provides": {
