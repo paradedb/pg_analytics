@@ -38,6 +38,7 @@
       "url": "https://pgxn.org/meta/spec.txt"
    },
    "tags": [
+      "paradedb",
       "analytics",
       "big data",
       "olap",
