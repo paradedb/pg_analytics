@@ -1,0 +1,54 @@
+{
+   "name": "pg_analytics",
+   "abstract": "DuckDB-powered data lake analytics from Postgres",
+   "description": "pg_analytics puts DuckDB inside Postgres. With pg_analytics installed, Postgres can query foreign object stores like AWS S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high-performance analytical query engine.",
+   "version": "@CARGO_VERSION@",
+   "maintainer": [
+      "ParadeDB <support@paradedb.com>"
+   ],
+   "license": "postgresql",
+   "provides": {
+      "pg_analytics": {
+         "abstract": "DuckDB-powered data lake analytics from Postgres",
+         "file": "src/lib.rs",
+         "docfile": "doc/overview.mdx",
+         "version": "@CARGO_VERSION@"
+      }
+   },
+   "prereqs": {
+      "runtime": {
+         "requires": {
+            "PostgreSQL": "13.0.0"
+         }
+      }
+   },
+   "resources": {
+      "bugtracker": {
+         "web": "https://github.com/paradedb/pg_analytics/issues/"
+      },
+      "repository": {
+         "url": "git://github.com/paradedb/pg_analytics.git",
+         "web": "https://github.com/paradedb/pg_analytics/",
+         "type": "git"
+      }
+   },
+   "generated_by": "David E. Wheeler",
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "https://pgxn.org/meta/spec.txt"
+   },
+   "tags": [
+      "paradedb",
+      "analytics",
+      "big data",
+      "olap",
+      "parquet",
+      "iceberg",
+      "object storage",
+      "datalake",
+      "arrow",
+      "realtime analytics",
+      "columnar",
+      "duckdb"
+   ]
+}
