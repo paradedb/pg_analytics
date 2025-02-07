@@ -25,6 +25,7 @@ jobs:
   benchmark-pg_analytics:
     name: Benchmark pg_analytics on ${{ matrix.name }}
     runs-on: ubicloud-standard-8
+    if: github.event.pull_request.draft == false
     strategy:
       matrix:
         include:
