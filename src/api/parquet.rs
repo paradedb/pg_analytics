@@ -73,19 +73,22 @@ pub fn parquet_describe(
 #[pg_extern]
 pub fn parquet_schema(
     relation: PgRelation,
-) -> iter::TableIterator<'static, (
-    name!(file_name, Option<String>),
-    name!(name, Option<String>),
-    name!(type, Option<String>),
-    name!(type_length, Option<String>),
-    name!(repetition_type, Option<String>),
-    name!(num_children, Option<i64>),
-    name!(converted_type, Option<String>),
-    name!(scale, Option<i64>),
-    name!(precision, Option<i64>),
-    name!(field_id, Option<i64>),
-    name!(logical_type, Option<String>),
-)> {
+) -> iter::TableIterator<
+    'static,
+    (
+        name!(file_name, Option<String>),
+        name!(name, Option<String>),
+        name!(type, Option<String>),
+        name!(type_length, Option<String>),
+        name!(repetition_type, Option<String>),
+        name!(num_children, Option<i64>),
+        name!(converted_type, Option<String>),
+        name!(scale, Option<i64>),
+        name!(precision, Option<i64>),
+        name!(field_id, Option<i64>),
+        name!(logical_type, Option<String>),
+    ),
+> {
     let rows = parquet_schema_impl(relation).unwrap_or_else(|e| {
         panic!("{}", e);
     });
