@@ -1,5 +1,6 @@
 -- src/api/parquet.rs:52
 -- pg_analytics::api::parquet::parquet_describe
+DROP FUNCTION "parquet_describe"(TEXT);
 CREATE OR REPLACE FUNCTION "parquet_describe"(
 	"relation" regclass /* pgrx::rel::PgRelation */
 ) RETURNS TABLE (
@@ -17,6 +18,7 @@ AS 'MODULE_PATHNAME', 'parquet_describe_wrapper';
 
 -- src/api/parquet.rs:73
 -- pg_analytics::api::parquet::parquet_schema
+DROP FUNCTION "parquet_schema"(TEXT);
 CREATE OR REPLACE FUNCTION "parquet_schema"(
 	"relation" regclass /* pgrx::rel::PgRelation */
 ) RETURNS TABLE (
