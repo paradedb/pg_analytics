@@ -13,7 +13,7 @@
 
 `pg_analytics` (formerly named `pg_lakehouse`) puts DuckDB inside Postgres. With `pg_analytics` installed, Postgres can query foreign object stores like AWS S3 and table formats like Iceberg or Delta Lake. Queries are pushed down to DuckDB, a high performance analytical query engine.
 
-`pg_analytics` uses DuckDB v1.0.0 and is supported on Postgres 13+.
+`pg_analytics` uses DuckDB v1.1.0 and is supported on Postgres 13+.
 
 ### Motivation
 
@@ -111,9 +111,7 @@ SELECT COUNT(*) FROM trips;
 
 ## Documentation
 
-Complete documentation for `pg_analytics` can be found under the [docs](/docs/) folder as Markdown files. It covers how to query the various object stores and file and table formats supports, and how to configure and tune the extension.
-
-A hosted version of the documentation can be found [here](https://docs.paradedb.com/integrations/overview).
+Complete documentation for `pg_analytics` can be found [here](https://docs.paradedb.com/integrations/overview).
 
 ## Development
 
