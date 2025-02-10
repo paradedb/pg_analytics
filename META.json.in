@@ -11,7 +11,7 @@
       "pg_analytics": {
          "abstract": "DuckDB-powered data lake analytics from Postgres",
          "file": "src/lib.rs",
-         "docfile": "doc/overview.mdx",
+         "docfile": "README.md",
          "version": "@CARGO_VERSION@"
       }
    },
