@@ -101,7 +101,7 @@ unsafe fn auto_create_schema_impl(fcinfo: pg_sys::FunctionCallInfo) -> Result<()
         true => Spi::connect(|client| {
             client
                 // Casting as TEXT because the default return type is name (Oid(19)) and the conversion to Rust string fails
-                .select("SELECT CURRENT_SCHEMA::TEXT", None, None)?
+                .select("SELECT CURRENT_SCHEMA::TEXT", None, &[])?
                 .first()
                 .get_one()
         })?
