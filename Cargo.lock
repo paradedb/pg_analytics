@@ -4174,7 +4174,7 @@ dependencies = [
 
 [[package]]
 name = "pg_analytics"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "anyhow",
  "async-std",
@@ -5841,7 +5841,7 @@ dependencies = [
 
 [[package]]
 name = "tests"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "anyhow",
  "async-std",
