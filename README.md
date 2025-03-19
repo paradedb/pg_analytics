@@ -3,6 +3,14 @@
 <br>
 </h1>
 
+> **Notice**
+>
+> The `paradedb/pg_analytics` extension has been discontinued and is archived. This decision was made because ParadeDB's work on Postgres analytics is now being done in our primary extension, `pg_search`. If you are looking for fast analytics on Postgres, we recommend you check out our [`paradedb/paradedb`](https://github.com/paradedb/paradedb) repository.
+>
+> The code in this repository is no longer maintained.
+>
+> [Learn more](https://github.com/paradedb/paradedb/blob/dev/README.md).
+
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/paradedb)](https://artifacthub.io/packages/search?repo=paradedb)
 [![Docker Pulls](https://img.shields.io/docker/pulls/paradedb/paradedb)](https://hub.docker.com/r/paradedb/paradedb)
 [![License](https://img.shields.io/badge/License-PostgreSQL-blue)](https://github.com/paradedb/pg_analytics?tab=PostgreSQL-1-ov-file#readme)
