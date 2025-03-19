@@ -132,10 +132,7 @@ jobs:
       - name: Compile & install pg_analytics extension
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
         run: |
-          # Necessary for the ephemeral Postgres test to have proper permissions
           sudo chown -R $(whoami) /usr/share/postgresql/${{ matrix.pg_version }}/ /usr/lib/postgresql/${{ matrix.pg_version }}/
-
-          # Run tests
           cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
 
       - name: Start Postgres via cargo-pgrx
