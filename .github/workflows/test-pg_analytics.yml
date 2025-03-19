@@ -131,7 +131,12 @@ jobs:
 
       - name: Compile & install pg_analytics extension
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
-        run: cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
+        run: |
+          # Necessary for the ephemeral Postgres test to have proper permissions
+          sudo chown -R $(whoami) /usr/share/postgresql/${{ matrix.pg_version }}/ /usr/lib/postgresql/${{ matrix.pg_version }}/
+
+          # Run tests
+          cargo pgrx install --pg-config="/usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config"
 
       - name: Start Postgres via cargo-pgrx
         if: steps.check_skip.outputs.skip_remaining_steps != 'true'
@@ -148,9 +153,6 @@ jobs:
           LLVM_PROFILE_FILE: target/coverage/pg_analytics-%p-%m.profraw
           RUST_BACKTRACE: full
         run: |
-          # Necessary for the ephemeral Postgres test to have proper permissions
-          sudo chown -R $(whoami) /usr/share/postgresql/${{ matrix.pg_version }}/ /usr/lib/postgresql/${{ matrix.pg_version }}/
-
           echo ""
           echo "Running Rust tests..."
           export DATABASE_URL=postgresql://localhost:288${{ matrix.pg_version }}/postgres
